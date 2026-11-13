@@ -11,12 +11,12 @@ import {
 import {
   CheckCircle2, Circle, Plus, Edit2, Trash2, ArrowUp, ArrowDown,
   History, Users, FileText, CheckSquare, Sparkles, Search,
-  Download, Printer, RotateCcw, FolderPlus, X, Check,
+  Download, RotateCcw, FolderPlus, X, Check,
   Calendar, LogOut, User, StickyNote, RefreshCw, AlertCircle,
-  ChevronLeft, ChevronRight, Shield
+  ChevronLeft, ChevronRight, Shield, Star, ArrowUpDown
 } from 'lucide-react';
 
-// --- Firebase Configuration (BandSyncと共通プロジェクト / 即時同期最適化) ---
+// --- Firebase Configuration (即時同期最適化) ---
 const firebaseConfig = {
   apiKey: "AIzaSyCJewcEeVpF83wLDuYnFljlH2b9RxVf9iI",
   authDomain: "wpb2025-d1432.firebaseapp.com",
@@ -30,7 +30,6 @@ let db;
 try {
   const app = initializeApp(firebaseConfig);
   try {
-    // キャンパスWi-Fiやスマホ回線での遅延を防ぐロングポーリング自動切替を有効化
     db = initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true
@@ -44,10 +43,35 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v3";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v5";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
+
+// --- 重要度（なし / 1〜5）の定義 ---
+const IMPORTANCE_OPTIONS = [
+  { value: 0, label: "なし", short: "なし", badgeClass: "bg-slate-100 text-slate-500 border-slate-200", activeBtnClass: "bg-slate-700 text-white border-slate-700" },
+  { value: 1, label: "★1 (低)", short: "★1", badgeClass: "bg-slate-100 text-slate-700 border-slate-300", activeBtnClass: "bg-slate-600 text-white border-slate-600" },
+  { value: 2, label: "★2 (やや低)", short: "★2", badgeClass: "bg-sky-50 text-sky-800 border-sky-200", activeBtnClass: "bg-sky-600 text-white border-sky-600" },
+  { value: 3, label: "★3 (中)", short: "★3", badgeClass: "bg-amber-50 text-amber-800 border-amber-300", activeBtnClass: "bg-amber-500 text-white border-amber-500" },
+  { value: 4, label: "★4 (高)", short: "★4", badgeClass: "bg-orange-100 text-orange-900 border-orange-300", activeBtnClass: "bg-orange-600 text-white border-orange-600" },
+  { value: 5, label: "★5 (最優先)", short: "★5", badgeClass: "bg-rose-100 text-rose-800 border-rose-300 ring-1 ring-rose-200", activeBtnClass: "bg-rose-600 text-white border-rose-600" }
+];
+
+const getImportanceMeta = (val) => {
+  const num = Number(val) || 0;
+  return IMPORTANCE_OPTIONS.find((o) => o.value === num) || IMPORTANCE_OPTIONS[0];
+};
+
+// --- 並び替えモードのラベル定義 ---
+const SORT_MODE_LABELS = {
+  manual: "手動順（↑↓）",
+  added_asc: "追加順（昇順：古い→新しい）",
+  added_desc: "追加順（降順：新しい→古い）",
+  imp_desc: "重要度が高い順（★5→★1→なし）",
+  imp_asc: "重要度が低い順（★1→★5→なし）",
+  who_asc: "担当者名順"
+};
 
 // --- 写真の役職表に基づく幹部代メンバー20名と担当役職データ ---
 const KANBU_ROSTER = [
@@ -193,7 +217,6 @@ const KANBU_ROSTER = [
   }
 ];
 
-// 写真の表に基づく役職カテゴリー一覧（「誰が」の役職選択用）
 const ROLE_CATEGORIES = [
   {
     group: "全体・グループ",
@@ -221,7 +244,6 @@ const ROLE_CATEGORIES = [
   }
 ];
 
-// 写真の表の詳細一覧（マイページ等で確認可能）
 const FULL_ROLE_TABLE = [
   { cat: "幹部", role: "部長", main: "安部建人", sub: "" },
   { cat: "幹部", role: "副部長", main: "小林秀星", sub: "" },
@@ -255,96 +277,96 @@ const FULL_ROLE_TABLE = [
   { cat: "その他", role: "卒パ", main: "★小川美晴, 小島大幹", sub: "" }
 ];
 
-// --- 初期データ（2026年10月〜11月11日 全会議統合） ---
+// --- 初期データ ---
 const INITIAL_STATE = {
   tasks: [
-    { id: "todo-1", who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-2", who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-3", who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-4", who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-5", who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-6", who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-7", who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-8", who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-9", who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-10", who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-11", who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-12", who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-13", who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-14", who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-15", who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-16", who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-17", who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-18", who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-1", who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-2", who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-3", who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-4", who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, updatedBy: "初期データ", updatedAt: "11/01" },
-    { id: "done-5", who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, updatedBy: "初期データ", updatedAt: "10/14" },
-    { id: "done-6", who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, updatedBy: "初期データ", updatedAt: "11/11" }
+    { id: "todo-1", createdAt: 1001, who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-2", createdAt: 1002, who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-3", createdAt: 1003, who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-4", createdAt: 1004, who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-5", createdAt: 1005, who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-6", createdAt: 1006, who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-14", createdAt: 1014, who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-15", createdAt: 1015, who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-16", createdAt: 1016, who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-17", createdAt: 1017, who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-18", createdAt: 1018, who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-1", createdAt: 2001, who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-2", createdAt: 2002, who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-3", createdAt: 2003, who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-4", createdAt: 2004, who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/01" },
+    { id: "done-5", createdAt: 2005, who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "10/14" },
+    { id: "done-6", createdAt: 2006, who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" }
   ],
   decisions: [
     {
       id: "cat-1",
       category: "■ 役職補佐・会議の役割分担と基本ルール",
       items: [
-        { id: "dec-101", title: "幹部補佐の決定（10/5幹文連）", content: "総務補佐＝「小島大幹（こじだい）」、渉外補佐＝「大場怜（れん）・小川美晴（みはる）」、会計補佐＝「森柊実（しゅうま）・渡会啓人（わたらい）」（しゅうまの差し入れ等の懸念も確認し問題なしと判断）。" },
-        { id: "dec-102", title: "会議・枠決めの役割分担（10/14幹部代）", content: "枠決め司会＝「小林秀星・亀谷博昭」の2名体制、黒板（板書）係＝「滑川優斗（なめこ）」、議事録係＝「小林秀星・渡会啓人」の2名体制、タイムキーパー＝会議進行役の「安部建人」が兼任。" },
-        { id: "dec-103", title: "会議の進行方法（10/14幹文連）", content: "全員が揃った上で、アジェンダの上から順番通りに議論を進める。" },
-        { id: "dec-104", title: "欠席・遅刻の原則禁止と連絡先（11/11幹部代）", content: "人数が少なく投票の信憑性を保つため、また説明を二度行う負担を減らすため欠席・遅刻は原則禁止。やむを得ず休む場合は「弘田隼大（ひろはや）」へ連絡する。" },
-        { id: "dec-105", title: "会議中のタバコ休憩禁止（11/11幹部代）", content: "会議中のタバコ休憩は全面禁止（事前に済ませてくること）。" },
-        { id: "dec-106", title: "決定事項の不遡及と発言の徹底（11/11幹部代）", content: "一度決まったことは後から覆らないため、意見が固まっていなくても不満や疑問はその場で必ず「ちょっと待って」と発言する。" },
-        { id: "dec-107", title: "投票ルール・ダブルスコア制（11/11幹部代）", content: "2択の投票で多数派が少数派の2倍以上（ダブルスコア）になった場合は協議なしで即決定。つかなければ1度だけ再協議を行い、2回目の投票で即決定（これも覆らない）。議論が停滞した際は一旦アンケートをとって整理する。" },
-        { id: "dec-108", title: "幹部代フォルダの共有制限（11/11幹部代）", content: "法政大学アカウント全員に編集権限がついているため、リンクは他学年には絶対に共有せず幹部代のみに厳守する。" }
+        { id: "dec-101", createdAt: 3101, title: "幹部補佐の決定（10/5幹文連）", content: "総務補佐＝「小島大幹（こじだい）」、渉外補佐＝「大場怜（れん）・小川美晴（みはる）」、会計補佐＝「森柊実（しゅうま）・渡会啓人（わたらい）」（しゅうまの差し入れ等の懸念も確認し問題なしと判断）。", importance: 0 },
+        { id: "dec-102", createdAt: 3102, title: "会議・枠決めの役割分担（10/14幹部代）", content: "枠決め司会＝「小林秀星・亀谷博昭」の2名体制、黒板（板書）係＝「滑川優斗（なめこ）」、議事録係＝「小林秀星・渡会啓人」の2名体制、タイムキーパー＝会議進行役の「安部建人」が兼任。", importance: 0 },
+        { id: "dec-103", createdAt: 3103, title: "会議の進行方法（10/14幹文連）", content: "全員が揃った上で、アジェンダの上から順番通りに議論を進める。", importance: 0 },
+        { id: "dec-104", createdAt: 3104, title: "欠席・遅刻の原則禁止と連絡先（11/11幹部代）", content: "人数が少なく投票の信憑性を保つため、また説明を二度行う負担を減らすため欠席・遅刻は原則禁止。やむを得ず休む場合は「弘田隼大（ひろはや）」へ連絡する。", importance: 0 },
+        { id: "dec-105", createdAt: 3105, title: "会議中のタバコ休憩禁止（11/11幹部代）", content: "会議中のタバコ休憩は全面禁止（事前に済ませてくること）。", importance: 0 },
+        { id: "dec-106", createdAt: 3106, title: "決定事項の不遡及と発言の徹底（11/11幹部代）", content: "一度決まったことは後から覆らないため、意見が固まっていなくても不満や疑問はその場で必ず「ちょっと待って」と発言する。", importance: 0 },
+        { id: "dec-107", createdAt: 3107, title: "投票ルール・ダブルスコア制（11/11幹部代）", content: "2択の投票で多数派が少数派の2倍以上（ダブルスコア）になった場合は協議なしで即決定。つかなければ1度だけ再協議を行い、2回目の投票で即決定（これも覆らない）。議論が停滞した際は一旦アンケートをとって整理する。", importance: 0 },
+        { id: "dec-108", createdAt: 3108, title: "幹部代フォルダの共有制限（11/11幹部代）", content: "法政大学アカウント全員に編集権限がついているため、リンクは他学年には絶対に共有せず幹部代のみに厳守する。", importance: 0 }
       ]
     },
     {
       id: "cat-2",
       category: "■ バンド練習枠・枠決め・ベース講習の優先練習枠",
       items: [
-        { id: "dec-201", title: "枠決めの開始日時と順序（10/5・10/14議事録）", content: "11月6日（金）19:00スタート。昨年同様「定例ライブの枠決め」を先に行い、終わり次第「講習会の枠決め」を実施する。" },
-        { id: "dec-202", title: "練習枠の上限数（10/14幹部代）", content: "バンド数が昨年（9バンド）から12バンドへ増加したことを踏まえ、Zoom投票（8対6）の結果、上限は「6枠」に決定。" },
-        { id: "dec-203", title: "ベース講習の優先練習枠（11/11幹部代）", content: "課題曲のバンド合わせのため、12月定例後より取得可能な「ベース講習生も含めた優先練習枠（1枠：1週間後以降でも先に枠を取ってよい権利）」を与えることに決定（1回目12対6、2回目全会一致）。" }
+        { id: "dec-201", createdAt: 3201, title: "枠決めの開始日時と順序（10/5・10/14議事録）", content: "11月6日（金）19:00スタート。昨年同様「定例ライブの枠決め」を先に行い、終わり次第「講習会の枠決め」を実施する。", importance: 0 },
+        { id: "dec-202", createdAt: 3202, title: "練習枠の上限数（10/14幹部代）", content: "バンド数が昨年（9バンド）から12バンドへ増加したことを踏まえ、Zoom投票（8対6）の結果、上限は「6枠」に決定。", importance: 0 },
+        { id: "dec-203", createdAt: 3203, title: "ベース講習の優先練習枠（11/11幹部代）", content: "課題曲のバンド合わせのため、12月定例後より取得可能な「ベース講習生も含めた優先練習枠（1枠：1週間後以降でも先に枠を取ってよい権利）」を与えることに決定（1回目12対6、2回目全会一致）。", importance: 0 }
       ]
     },
     {
       id: "cat-3",
       category: "■ 定例投票・12月定例ライブの運営ルール",
       items: [
-        { id: "dec-301", title: "定例投票の同数時ルール（10/21幹文連）", content: "定例投票において1位や14位などの得票数が同数だった場合、投票権を持つ幹部代による「決選投票（自票なし）」を行う。合宿3日目の夜に開票作業を行うため、決選投票は「3日目の夜〜撤収日の昼」の間に実施して決定する。" },
-        { id: "dec-302", title: "12月定例・サポート出演料免除（11/11幹部代）", content: "例年通り「1曲のみ出演のサポートメンバーは出演費免除」とする（小林秀星が把握用フォームを作成）。" },
-        { id: "dec-303", title: "12月定例・出演キャンセル時の対応（11/11幹部代）", content: "タイムテーブルを巻いて進行するのではなく、「15位以下の代わりのバンドを繰り上げて出す」ことに決定（1回目11対6 → 再協議後の2回目投票で14票のダブルスコアで決定）。" },
-        { id: "dec-304", title: "出演キャンセル時の返金・料金規定（10/5・10/14・11/11議事録）", content: "10/14会議で「全体会議の投票で決める」と決定し、11/11幹部代会議で投票を行った結果、回収額決定後のキャンセル料は「一旦全額を徴収し、返金（キャッシュバック）するかは事後の会議で状況を見て判断する」方針に決定（細かい足切り基準は2月ライブ時等に再議論）。" },
-        { id: "dec-305", title: "12月定例・チケット代（ドリチケ）回収シフト（11/11幹部代）", content: "当日の受付シフトは庶務の「溝上萌乃佳」（および浦山大樹・幹文連）が12月定例の1週間前までに作成する。" }
+        { id: "dec-301", createdAt: 3301, title: "定例投票の同数時ルール（10/21幹文連）", content: "定例投票において1位や14位などの得票数が同数だった場合、投票権を持つ幹部代による「決選投票（自票なし）」を行う。合宿3日目の夜に開票作業を行うため、決選投票は「3日目の夜〜撤収日の昼」の間に実施して決定する。", importance: 0 },
+        { id: "dec-302", createdAt: 3302, title: "12月定例・サポート出演料免除（11/11幹部代）", content: "例年通り「1曲のみ出演のサポートメンバーは出演費免除」とする（小林秀星が把握用フォームを作成）。", importance: 0 },
+        { id: "dec-303", createdAt: 3303, title: "12月定例・出演キャンセル時の対応（11/11幹部代）", content: "タイムテーブルを巻いて進行するのではなく、「15位以下の代わりのバンドを繰り上げて出す」ことに決定（1回目11対6 → 再協議後の2回目投票で14票のダブルスコアで決定）。", importance: 0 },
+        { id: "dec-304", createdAt: 3304, title: "出演キャンセル時の返金・料金規定（10/5・10/14・11/11議事録）", content: "10/14会議で「全体会議の投票で決める」と決定し、11/11幹部代会議で投票を行った結果、回収額決定後のキャンセル料は「一旦全額を徴収し、返金（キャッシュバック）するかは事後の会議で状況を見て判断する」方針に決定（細かい足切り基準は2月ライブ時等に再議論）。", importance: 0 },
+        { id: "dec-305", createdAt: 3305, title: "12月定例・チケット代（ドリチケ）回収シフト（11/11幹部代）", content: "当日の受付シフトは庶務の「溝上萌乃佳」（および浦山大樹・幹文連）が12月定例の1週間前までに作成する。", importance: 0 }
       ]
     },
     {
       id: "cat-4",
       category: "■ 2月・3月・春学期（5月・6月）ライブの会場・日程と運営方針",
       items: [
-        { id: "dec-401", title: "2月ライブの日程・会場・4回生確定枠（11/11幹部代）", content: "日程は2月2日（火）〜4日（木）の3日間、9:00演者入り／21:00完全撤収、会場は「府中Flight」。4回生（今年24人）の確定枠は「あり（例年通り1人1枠まで、同バンド内に複数の4回生がいる場合は全員がその枠を消費する）」に決定。" },
-        { id: "dec-402", title: "3月ライブの会場・日程（10/5幹文連）", content: "会場は「府中Flight」、日程は「3月第1週目の土日2日間（3月6日・7日）」に決定。昨年より出演増が予想されるため、卒コン出演バンドを抜くか、余った時間を企画や時間延長に充てるかを引き続き検討する。" },
-        { id: "dec-403", title: "5月・6月ライブの会場（10/5・10/14幹文連）", content: "180日前早割（10%オフ）適用時の料金差がほぼないこと（BlackHole：1日25万円、Flight：12時間パック＋機材等から早割で約23万円）や双方の利点を踏まえ、「5月：BlackHole（1日間）」「6月：Flight（2日間）」に決定。" },
-        { id: "dec-404", title: "5月・6月ライブの赤字対策（10/14幹文連）", content: "6月は通常どおり12時間パックで実施。5月は4月に事前アンケートを実施し、応募バンドが少なければ「5月企画バンド」を導入しつつ、レンタル時間短縮（8時間プラン＋延長等による費用圧縮）も含めて事前の赤字予防策を講じる。" }
+        { id: "dec-401", createdAt: 3401, title: "2月ライブの日程・会場・4回生確定枠（11/11幹部代）", content: "日程は2月2日（火）〜4日（木）の3日間、9:00演者入り／21:00完全撤収、会場は「府中Flight」。4回生（今年24人）の確定枠は「あり（例年通り1人1枠まで、同バンド内に複数の4回生がいる場合は全員がその枠を消費する）」に決定。", importance: 0 },
+        { id: "dec-402", createdAt: 3402, title: "3月ライブの会場・日程（10/5幹文連）", content: "会場は「府中Flight」、日程は「3月第1週目の土日2日間（3月6日・7日）」に決定。昨年より出演増が予想されるため、卒コン出演バンドを抜くか、余った時間を企画や時間延長に充てるかを引き続き検討する。", importance: 0 },
+        { id: "dec-403", createdAt: 3403, title: "5月・6月ライブの会場（10/5・10/14幹文連）", content: "180日前早割（10%オフ）適用時の料金差がほぼないこと（BlackHole：1日25万円、Flight：12時間パック＋機材等から早割で約23万円）や双方の利点を踏まえ、「5月：BlackHole（1日間）」「6月：Flight（2日間）」に決定。", importance: 0 },
+        { id: "dec-404", createdAt: 3404, title: "5月・6月ライブの赤字対策（10/14幹文連）", content: "6月は通常どおり12時間パックで実施。5月は4月に事前アンケートを実施し、応募バンドが少なければ「5月企画バンド」を導入しつつ、レンタル時間短縮（8時間プラン＋延長等による費用圧縮）も含めて事前の赤字予防策を講じる。", importance: 0 }
       ]
     },
     {
       id: "cat-5",
       category: "■ 機材・備品の購入と修理・管理ルール（11/11幹部代）",
       items: [
-        { id: "dec-501", title: "購入決定品（予算残高：計約230万〜240万円規模で余裕あり）", content: "①大蛇用収納箱、②照明・PAコード類区別用の箱、③カメラ隊のカメラケース、④ベース返し（EV）、⑤2スタ・マーシャル1台目の修理部品（渡会啓人が修理）、⑥共用ピックホルダー（3個）、⑦予備キャノンケーブル（長さ別5本ずつ程度）、⑧ドラム台用六角レンチセット、⑨照明設営用の透明な安全ピン。" },
-        { id: "dec-502", title: "修理・確認決定", content: "上手の横当ては修理へ。2スタ・マーシャル2台目は先輩（こたさん）に確認後修理へ。バラバラの3台目マーシャルは先輩（けいたさん）に連絡して確認。" },
-        { id: "dec-503", title: "様子見・保留決定", content: "マークベースは12月定例まで様子見。ハイハット割れは現状維持（ドラムグルで注意喚起）。同期用オーディオインターフェース共有購入案は一旦保留（高額機材申請時に再検討）。" },
-        { id: "dec-504", title: "管理ルールの新設", content: "OB企画等での使用希望を受け「ボーカルエフェクターの使用スケジュール表」を作成する。各パトリはパート内で必要機材の要望アンケートフォームを実施する。" }
+        { id: "dec-501", createdAt: 3501, title: "購入決定品（予算残高：計約230万〜240万円規模で余裕あり）", content: "①大蛇用収納箱、②照明・PAコード類区別用の箱、③カメラ隊のカメラケース、④ベース返し（EV）、⑤2スタ・マーシャル1台目の修理部品（渡会啓人が修理）、⑥共用ピックホルダー（3個）、⑦予備キャノンケーブル（長さ別5本ずつ程度）、⑧ドラム台用六角レンチセット、⑨照明設営用の透明な安全ピン。", importance: 0 },
+        { id: "dec-502", createdAt: 3502, title: "修理・確認決定", content: "上手の横当ては修理へ。2スタ・マーシャル2台目は先輩（こたさん）に確認後修理へ。バラバラの3台目マーシャルは先輩（けいたさん）に連絡して確認。", importance: 0 },
+        { id: "dec-503", createdAt: 3503, title: "様子見・保留決定", content: "マークベースは12月定例まで様子見。ハイハット割れは現状維持（ドラムグルで注意喚起）。同期用オーディオインターフェース共有購入案は一旦保留（高額機材申請時に再検討）。", importance: 0 },
+        { id: "dec-504", createdAt: 3504, title: "管理ルールの新設", content: "OB企画等での使用希望を受け「ボーカルエフェクターの使用スケジュール表」を作成する。各パトリはパート内で必要機材の要望アンケートフォームを実施する。", importance: 0 }
       ]
     },
     {
       id: "cat-6",
       category: "■ 学祭・生花手配・新歓SNS広報・学祭反省を受けた改善策",
       items: [
-        { id: "dec-601", title: "生花（なまばな）の手配と保管（10/5・10/14幹文連）", content: "割り勘なし・すべて部費（予算3万円前後）で幹文連向けに手配（余ったら機材統括へ）。配達・保管場所は「安部建人の家」。" },
-        { id: "dec-602", title: "新歓・SNS広報用の動画撮影と編集体制（10/14・11/11議事録）", content: "学祭の全エリアやパート別講習会の様子を「5秒程度（一瞬）の短い動画素材」として撮影・蓄積。編集は小林秀星・朱函悦に加え、程よく仕事がない人からあと2〜3名を追加募集する（亀谷博昭は冗談のため不採用）。" },
-        { id: "dec-603", title: "学祭の反省を受けた改善策（11/11幹部代）", content: "①グリーンシートを敷く位置は部長の「安部建人」が管理・指揮、②舞台・照明間でステージ中心位置を統一しマニュアル化、③異常に強く光る照明個体を特定して端に配置・番号管理（照明設営：大場怜管轄）、④電流不足対策としてパワーディストリビューター等から電源確保（機材統括：浦山大樹管轄）、⑤ステージ上のケーブル整理徹底（PA設営管轄）、⑥浦山大樹がPAシートを修正（DI・同期位置欄を追加）しシート通りの動きと「不要なコーラスマイク禁止」を徹底、⑦電ドラ受け渡し時の確認徹底、⑧幹部代（特にセクションリーダー）の現場遅刻厳禁。" }
+        { id: "dec-601", createdAt: 3601, title: "生花（なまばな）の手配と保管（10/5・10/14幹文連）", content: "割り勘なし・すべて部費（予算3万円前後）で幹文連向けに手配（余ったら機材統括へ）。配達・保管場所は「安部建人の家」。", importance: 0 },
+        { id: "dec-602", createdAt: 3602, title: "新歓・SNS広報用の動画撮影と編集体制（10/14・11/11議事録）", content: "学祭の全エリアやパート別講習会の様子を「5秒程度（一瞬）の短い動画素材」として撮影・蓄積。編集は小林秀星・朱函悦に加え、程よく仕事がない人からあと2〜3名を追加募集する（亀谷博昭は冗談のため不採用）。", importance: 0 },
+        { id: "dec-603", createdAt: 3603, title: "学祭の反省を受けた改善策（11/11幹部代）", content: "①グリーンシートを敷く位置は部長の「安部建人」が管理・指揮、②舞台・照明間でステージ中心位置を統一しマニュアル化、③異常に強く光る照明個体を特定して端に配置・番号管理（照明設営：大場怜管轄）、④電流不足対策としてパワーディストリビューター等から電源確保（機材統括：浦山大樹管轄）、⑤ステージ上のケーブル整理徹底（PA設営管轄）、⑥浦山大樹がPAシートを修正（DI・同期位置欄を追加）しシート通りの動きと「不要なコーラスマイク禁止」を徹底、⑦電ドラ受け渡し時の確認徹底、⑧幹部代（特にセクションリーダー）の現場遅刻厳禁。", importance: 0 }
       ]
     }
   ],
@@ -379,7 +401,6 @@ const formatDateLabel = (yyyyMmDd) => {
   return `${m}/${d}(${w})`;
 };
 
-// メンバーの役職・名前がタスクの「誰が(who)」に該当するか判定
 const isTaskForMember = (taskWho, memberObj) => {
   if (!taskWho || !memberObj) return false;
   const text = taskWho.toLowerCase();
@@ -401,7 +422,6 @@ const isTaskForMember = (taskWho, memberObj) => {
   return false;
 };
 
-// 「誰が」の選択配列＋自由記述を結合
 const buildWhoString = (selectedNames, selectedRoles, freeText) => {
   const parts = [...selectedNames, ...selectedRoles];
   const cleanFree = (freeText || "").trim();
@@ -417,7 +437,6 @@ const buildWhoString = (selectedNames, selectedRoles, freeText) => {
   return "未定（全体）";
 };
 
-// 「いつまで」のカレンダー選択日付配列＋自由記述を結合
 const buildWhenString = (selectedDates, freeText) => {
   const formattedDates = selectedDates.map(formatDateLabel);
   const cleanFree = (freeText || "").trim();
@@ -433,11 +452,103 @@ const buildWhenString = (selectedDates, freeText) => {
   return "順次";
 };
 
+// 各項目の「追加された順番（タイムスタンプまたは初期番号）」を取得するヘルパー
+const getAddedOrderValue = (item) => {
+  if (typeof item?.createdAt === "number" && !Number.isNaN(item.createdAt)) {
+    return item.createdAt;
+  }
+  const idStr = String(item?.id || "");
+  const match = idStr.match(/^(todo|done|dec|task|cat)-(\d+)$/);
+  if (match) {
+    const prefix = match[1];
+    const num = parseInt(match[2], 10);
+    if (prefix === "todo") return 1000 + num;
+    if (prefix === "done") return 2000 + num;
+    if (prefix === "dec" && num < 100000) return 3000 + num;
+    return num; // Date.now() による13桁タイムスタンプ
+  }
+  return 0;
+};
+
+// 共通の並び替え比較関数（追加順［昇順・降順］・重要度順・担当者順）
+const compareItems = (a, b, mode) => {
+  if (mode === "added_asc") {
+    return getAddedOrderValue(a) - getAddedOrderValue(b);
+  }
+  if (mode === "added_desc") {
+    return getAddedOrderValue(b) - getAddedOrderValue(a);
+  }
+  const impA = Number(a.importance) || 0;
+  const impB = Number(b.importance) || 0;
+  if (mode === "imp_desc") {
+    if (impA !== impB) return impB - impA;
+    return getAddedOrderValue(a) - getAddedOrderValue(b);
+  }
+  if (mode === "imp_asc") {
+    const rankA = impA === 0 ? 99 : impA;
+    const rankB = impB === 0 ? 99 : impB;
+    if (rankA !== rankB) return rankA - rankB;
+    return getAddedOrderValue(a) - getAddedOrderValue(b);
+  }
+  if (mode === "who_asc") {
+    return String(a.who || "").localeCompare(String(b.who || ""), "ja");
+  }
+  return 0;
+};
+
+// --- 重要度（なし / 1〜5）セレクターコンポーネント ---
+function ImportanceSelector({ value, onChange, label = "重要度（1〜5 / なし）" }) {
+  const currentVal = Number(value) || 0;
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+        <Star size={14} className="text-amber-500" />
+        <span>{label}</span>
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {IMPORTANCE_OPTIONS.map((opt) => {
+          const active = currentVal === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 ${
+                active
+                  ? opt.activeBtnClass + " shadow-xs scale-[1.02]"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              <span>{opt.label}</span>
+              {active && <Check size={12} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --- 重要度バッジ表示コンポーネント ---
+function ImportanceBadge({ importance }) {
+  const num = Number(importance) || 0;
+  if (num <= 0) return null;
+  const meta = getImportanceMeta(num);
+  return (
+    <span
+      className={`font-bold text-[11px] px-2 py-0.5 rounded-lg border inline-flex items-center gap-0.5 ${meta.badgeClass}`}
+      title={`重要度: ${meta.label}`}
+    >
+      <span>重要度 {meta.short}</span>
+    </span>
+  );
+}
+
 // --- カレンダー日付選択コンポーネント ---
 function CalendarSelector({ selectedDates, onToggleDate, onClearDates }) {
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
@@ -553,7 +664,7 @@ function WhoSelector({
   setFreeText
 }) {
   const [openPicker, setOpenPicker] = useState(false);
-  const [pickerTab, setPickerTab] = useState("names"); // 'names' | 'roles'
+  const [pickerTab, setPickerTab] = useState("names");
 
   const toggleItem = (list, setList, item) => {
     if (list.includes(item)) {
@@ -581,7 +692,6 @@ function WhoSelector({
         </button>
       </div>
 
-      {/* 選択済みチップ表示 */}
       {(selectedNames.length > 0 || selectedRoles.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 bg-indigo-50/60 p-2 rounded-xl border border-indigo-100">
           <span className="text-[11px] font-bold text-indigo-800 mr-1">選択中:</span>
@@ -616,7 +726,6 @@ function WhoSelector({
         </div>
       )}
 
-      {/* 名前・役職ピッカー展開時 */}
       {openPicker && (
         <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-xs space-y-2.5">
           <div className="flex gap-1.5 border-b border-slate-100 pb-2">
@@ -640,7 +749,7 @@ function WhoSelector({
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              🏷️ 役職から選ぶ
+              🏷️ 役職から選ぶ（写真の表）
             </button>
           </div>
 
@@ -702,7 +811,6 @@ function WhoSelector({
         </div>
       )}
 
-      {/* 自由記述欄 */}
       <div>
         <input
           type="text"
@@ -798,7 +906,7 @@ export default function App() {
         return {
           tasks: Array.isArray(parsed.tasks) ? parsed.tasks : INITIAL_STATE.tasks,
           decisions: Array.isArray(parsed.decisions) ? parsed.decisions : INITIAL_STATE.decisions,
-          memos: parsed.memos && typeof parsed.memos === "object" ? parsed.memos : {},
+          memos: parsed.memos && typeof data?.memos === "object" ? parsed.memos : (parsed.memos || {}),
           logs: Array.isArray(parsed.logs) ? parsed.logs : INITIAL_STATE.logs,
           lastModified: parsed.lastModified || 0
         };
@@ -811,19 +919,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("mypage"); // 'mypage' | 'all' | 'tasks' | 'decisions' | 'logs'
   const [searchQuery, setSearchQuery] = useState("");
   const [filterWho, setFilterWho] = useState("ALL");
+  const [filterImportance, setFilterImportance] = useState("ALL");
   const [showRoleTableModal, setShowRoleTableModal] = useState(false);
+
+  // 各リストの並び替えモード状態
+  // 'manual' | 'added_asc' | 'added_desc' | 'imp_desc' | 'imp_asc' | 'who_asc'
+  const [todoSortMode, setTodoSortMode] = useState("manual");
+  const [doneSortMode, setDoneSortMode] = useState("manual");
+  const [decisionSortMode, setDecisionSortMode] = useState("manual");
 
   // ワンクッション確認モーダル状態
   const [confirmDialog, setConfirmDialog] = useState(null);
-  // { title, message, confirmLabel, confirmColor, onConfirm }
 
-  // 新規タスク入力用（「誰が」複数選択＋自由記述、「いつまで」カレンダー＋自由記述）
+  // 新規タスク入力用
   const [newTaskNames, setNewTaskNames] = useState([]);
   const [newTaskRoles, setNewTaskRoles] = useState([]);
   const [newTaskWhoFree, setNewTaskWhoFree] = useState("");
   const [newTaskDates, setNewTaskDates] = useState([]);
   const [newTaskWhenFree, setNewTaskWhenFree] = useState("");
   const [newTaskWhat, setNewTaskWhat] = useState("");
+  const [newTaskImportance, setNewTaskImportance] = useState(0);
 
   // タスク編集用
   const [editingTaskId, setEditingTaskId] = useState(null);
@@ -833,6 +948,7 @@ export default function App() {
   const [editTaskDates, setEditTaskDates] = useState([]);
   const [editTaskWhenFree, setEditTaskWhenFree] = useState("");
   const [editTaskWhat, setEditTaskWhat] = useState("");
+  const [editTaskImportance, setEditTaskImportance] = useState(0);
 
   // 新規決定事項・選択肢追加用
   const [selectedCatId, setSelectedCatId] = useState("cat-1");
@@ -840,10 +956,11 @@ export default function App() {
   const [newCustomCatName, setNewCustomCatName] = useState("");
   const [newDecTitle, setNewDecTitle] = useState("");
   const [newDecContent, setNewDecContent] = useState("");
+  const [newDecImportance, setNewDecImportance] = useState(0);
 
   // 決定事項編集用
   const [editingDecId, setEditingDecId] = useState(null);
-  const [editDecForm, setEditDecForm] = useState({ title: "", content: "" });
+  const [editDecForm, setEditDecForm] = useState({ title: "", content: "", importance: 0 });
 
   // マイページ：自由メモ用
   const [newMemoTitle, setNewMemoTitle] = useState("");
@@ -861,8 +978,13 @@ export default function App() {
     [currentUser]
   );
 
-  // ワンクッション確認呼び出しヘルパー
-  const requestConfirm = ({ title, message, confirmLabel = "OK（実行する）", confirmColor = "bg-indigo-600 hover:bg-indigo-700", onConfirm }) => {
+  const requestConfirm = ({
+    title,
+    message,
+    confirmLabel = "OK（実行する）",
+    confirmColor = "bg-indigo-600 hover:bg-indigo-700",
+    onConfirm
+  }) => {
     setConfirmDialog({
       title,
       message,
@@ -872,7 +994,7 @@ export default function App() {
     });
   };
 
-  // --- 即時同期（Firestore onSnapshot + BroadcastChannel + フォーカス時即取得） ---
+  // --- 即時同期 ---
   const fetchLatestNow = async () => {
     if (!db) return;
     try {
@@ -900,9 +1022,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    // 同一ブラウザ別タブ間の0ミリ秒同期
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v3");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v5");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -947,7 +1068,6 @@ export default function App() {
       docRef,
       (snap) => {
         if (snap.exists()) {
-          // 自分が書き込んだ直後のローカルエコーによるチラつきを防止し、他人の変更は即座に反映
           if (snap.metadata.hasPendingWrites) {
             setSyncStatus("synced");
             return;
@@ -984,7 +1104,6 @@ export default function App() {
     };
   }, []);
 
-  // 状態更新＆即時クラウド同期（UIは0msで更新し、裏で即座にFirestoreへ送信）
   const commitState = (nextState, logMessage) => {
     const nowTs = Date.now();
     lastLocalWriteTimeRef.current = nowTs;
@@ -1002,7 +1121,6 @@ export default function App() {
       lastModified: nowTs
     };
 
-    // 1. 画面とローカルストレージ、別タブへ0msで即時反映
     setBoardState(updated);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
     if (broadcastChannelRef.current) {
@@ -1011,7 +1129,6 @@ export default function App() {
       } catch (e) {}
     }
 
-    // 2. Firestoreへ非同期で即時プッシュ（UIをブロックしない）
     if (db) {
       setSyncStatus("saving");
       setDoc(doc(db, SYNC_COLLECTION, SYNC_DOC_ID), updated)
@@ -1025,7 +1142,7 @@ export default function App() {
     }
   };
 
-  // --- ログイン・ログアウト処理 ---
+  // --- ログイン・ログアウト ---
   const handleLogin = (nameToLogin) => {
     if (!nameToLogin) return;
     const now = Date.now();
@@ -1052,7 +1169,7 @@ export default function App() {
     });
   };
 
-  // --- タスク操作（すべてワンクッション確認付き） ---
+  // --- タスク操作（重要度＆並び替え対応・ワンクッション確認付き） ---
   const handleToggleTask = (taskId) => {
     const target = boardState.tasks.find((t) => t.id === taskId);
     if (!target) return;
@@ -1090,19 +1207,23 @@ export default function App() {
     }
     const who = presetWho || buildWhoString(newTaskNames, newTaskRoles, newTaskWhoFree);
     const when = buildWhenString(newTaskDates, newTaskWhenFree);
+    const impMeta = getImportanceMeta(newTaskImportance);
     const shortWhat = what.length > 28 ? what.slice(0, 28) + "…" : what;
 
     requestConfirm({
       title: isCompleted ? "完了済みリストへの追加確認" : "やるべきこと（ToDo）の追加確認",
-      message: `以下の内容でリストに追加しますか？\n\n・誰が：${who}\n・いつまで：${when}\n・内容：${what}`,
+      message: `以下の内容でリストに追加しますか？\n\n・誰が：${who}\n・いつまで：${when}\n・重要度：${impMeta.label}\n・内容：${what}`,
       confirmLabel: "追加する",
       confirmColor: isCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700",
       onConfirm: () => {
+        const nowTs = Date.now();
         const newTask = {
-          id: "task-" + Date.now(),
+          id: "task-" + nowTs,
+          createdAt: nowTs,
           who,
           when,
           what,
+          importance: Number(newTaskImportance) || 0,
           completed: isCompleted,
           updatedBy: currentUser,
           updatedAt: formatNow()
@@ -1113,9 +1234,10 @@ export default function App() {
         setNewTaskDates([]);
         setNewTaskWhenFree("");
         setNewTaskWhat("");
+        setNewTaskImportance(0);
         commitState(
           { ...boardState, tasks: [newTask, ...boardState.tasks] },
-          `${isCompleted ? "完了済みリスト" : "やるべきことリスト"}に「${shortWhat}」（担当: ${who}）を追加しました`
+          `${isCompleted ? "完了済みリスト" : "やるべきことリスト"}に「${shortWhat}」（担当: ${who} / 重要度: ${impMeta.short}）を追加しました`
         );
       }
     });
@@ -1134,6 +1256,7 @@ export default function App() {
         setEditTaskDates([]);
         setEditTaskWhenFree(t.when);
         setEditTaskWhat(t.what);
+        setEditTaskImportance(Number(t.importance) || 0);
       }
     });
   };
@@ -1146,10 +1269,12 @@ export default function App() {
     const finalWho = buildWhoString(editTaskNames, editTaskRoles, editTaskWhoFree);
     const finalWhen = buildWhenString(editTaskDates, editTaskWhenFree);
     const finalWhat = editTaskWhat.trim();
+    const finalImp = Number(editTaskImportance) || 0;
+    const impMeta = getImportanceMeta(finalImp);
 
     requestConfirm({
       title: "編集完了（保存）の確認",
-      message: `以下の内容で編集を完了し、保存しますか？\n\n・誰が：${finalWho}\n・いつまで：${finalWhen}\n・内容：${finalWhat}`,
+      message: `以下の内容で編集を完了し、保存しますか？\n\n・誰が：${finalWho}\n・いつまで：${finalWhen}\n・重要度：${impMeta.label}\n・内容：${finalWhat}`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextTasks = boardState.tasks.map((t) =>
@@ -1159,6 +1284,7 @@ export default function App() {
                 who: finalWho,
                 when: finalWhen,
                 what: finalWhat,
+                importance: finalImp,
                 updatedBy: currentUser,
                 updatedAt: formatNow()
               }
@@ -1167,7 +1293,7 @@ export default function App() {
         setEditingTaskId(null);
         commitState(
           { ...boardState, tasks: nextTasks },
-          `タスク（担当: ${finalWho}）の内容を編集しました`
+          `タスク（担当: ${finalWho} / 重要度: ${impMeta.short}）の内容を編集しました`
         );
       }
     });
@@ -1191,6 +1317,7 @@ export default function App() {
     });
   };
 
+  // 手動の上下並び替え（ToDo / 完了済み共通）
   const moveTask = (id, direction) => {
     const idx = boardState.tasks.findIndex((t) => t.id === id);
     if (idx === -1) return;
@@ -1216,10 +1343,48 @@ export default function App() {
     const tmp = nextTasks[idx];
     nextTasks[idx] = nextTasks[swapIdx];
     nextTasks[swapIdx] = tmp;
-    commitState({ ...boardState, tasks: nextTasks }, `タスクの表示順を並び替えました`);
+
+    if (targetCompleted) {
+      setDoneSortMode("manual");
+    } else {
+      setTodoSortMode("manual");
+    }
+    commitState(
+      { ...boardState, tasks: nextTasks },
+      `${targetCompleted ? "完了済みリスト" : "やるべきことリスト"}の表示順を並び替えました`
+    );
   };
 
-  // --- マイページ自由メモ操作（ワンクッション確認付き） ---
+  // リスト自体の並び順を「追加順（昇順・降順）」「重要度順」等で一括確定保存する機能
+  const applyPermanentTaskSort = (isCompletedTarget, mode) => {
+    const effectiveMode = mode === "manual" ? "imp_desc" : mode;
+    const modeLabel = SORT_MODE_LABELS[effectiveMode] || effectiveMode;
+    const listName = isCompletedTarget ? "すでに終わっていること（完了済みリスト）" : "やるべきことリスト（ToDo）";
+    requestConfirm({
+      title: "リストの並び順を一括更新",
+      message: `${listName}の並び順を「${modeLabel}」で確定し、全員の画面に保存しますか？`,
+      confirmLabel: "並び替えて保存する",
+      onConfirm: () => {
+        const targetItems = boardState.tasks.filter((t) => Boolean(t.completed) === Boolean(isCompletedTarget));
+        const otherItems = boardState.tasks.filter((t) => Boolean(t.completed) !== Boolean(isCompletedTarget));
+        const sortedTarget = [...targetItems].sort((a, b) => compareItems(a, b, effectiveMode));
+        const nextTasks = isCompletedTarget
+          ? [...otherItems, ...sortedTarget]
+          : [...sortedTarget, ...otherItems];
+        if (isCompletedTarget) {
+          setDoneSortMode("manual");
+        } else {
+          setTodoSortMode("manual");
+        }
+        commitState(
+          { ...boardState, tasks: nextTasks },
+          `${listName}を「${modeLabel}」に並び替えました`
+        );
+      }
+    });
+  };
+
+  // --- マイページ自由メモ操作 ---
   const userMemoList = useMemo(() => {
     if (!currentUser) return [];
     const allMemos = boardState.memos || {};
@@ -1310,7 +1475,7 @@ export default function App() {
     });
   };
 
-  // --- 決定事項＆選択肢（カテゴリ）操作（すべてワンクッション確認付き） ---
+  // --- 決定事項＆選択肢（カテゴリ）操作 ---
   const formatCategoryTitle = (raw) => {
     const trimmed = (raw || "").trim();
     if (!trimmed) return "";
@@ -1360,10 +1525,11 @@ export default function App() {
     }
 
     const cleanTitle = title.endsWith("：") || title.endsWith(":") ? title.slice(0, -1) : title || "決定事項";
+    const impMeta = getImportanceMeta(newDecImportance);
 
     requestConfirm({
       title: "決定事項の追加確認",
-      message: `以下の決定事項を追加しますか？\n\n・項目名：${cleanTitle}\n・内容：${content}`,
+      message: `以下の決定事項を追加しますか？\n\n・項目名：${cleanTitle}\n・重要度：${impMeta.label}\n・内容：${content}`,
       confirmLabel: "追加する",
       onConfirm: () => {
         let nextDecisions = [...boardState.decisions];
@@ -1385,10 +1551,13 @@ export default function App() {
           setShowCustomCatBox(false);
         }
 
+        const nowTs = Date.now();
         const newItem = {
-          id: "dec-" + Date.now(),
+          id: "dec-" + nowTs,
+          createdAt: nowTs,
           title: cleanTitle,
           content,
+          importance: Number(newDecImportance) || 0,
           updatedBy: currentUser,
           updatedAt: formatNow()
         };
@@ -1400,9 +1569,10 @@ export default function App() {
         setSelectedCatId(targetCatId);
         setNewDecTitle("");
         setNewDecContent("");
+        setNewDecImportance(0);
         commitState(
           { ...boardState, decisions: nextDecisions },
-          `決定事項「${cleanTitle}」を追加入力しました`
+          `決定事項「${cleanTitle}」（重要度: ${impMeta.short}）を追加入力しました`
         );
       }
     });
@@ -1415,7 +1585,11 @@ export default function App() {
       confirmLabel: "編集する",
       onConfirm: () => {
         setEditingDecId(item.id);
-        setEditDecForm({ title: item.title, content: item.content });
+        setEditDecForm({
+          title: item.title,
+          content: item.content,
+          importance: Number(item.importance) || 0
+        });
       }
     });
   };
@@ -1426,9 +1600,12 @@ export default function App() {
       return;
     }
     const cleanTitle = editDecForm.title.trim().replace(/[：:]$/, "");
+    const finalImp = Number(editDecForm.importance) || 0;
+    const impMeta = getImportanceMeta(finalImp);
+
     requestConfirm({
       title: "決定事項の編集完了（保存）",
-      message: `決定事項「${cleanTitle}」の編集内容を保存しますか？`,
+      message: `決定事項「${cleanTitle}」（重要度: ${impMeta.label}）の編集内容を保存しますか？`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextDecisions = boardState.decisions.map((cat) =>
@@ -1438,7 +1615,14 @@ export default function App() {
                 ...cat,
                 items: cat.items.map((it) =>
                   it.id === decId
-                    ? { ...it, title: cleanTitle, content: editDecForm.content.trim(), updatedBy: currentUser, updatedAt: formatNow() }
+                    ? {
+                        ...it,
+                        title: cleanTitle,
+                        content: editDecForm.content.trim(),
+                        importance: finalImp,
+                        updatedBy: currentUser,
+                        updatedAt: formatNow()
+                      }
                     : it
                 )
               }
@@ -1446,7 +1630,7 @@ export default function App() {
         setEditingDecId(null);
         commitState(
           { ...boardState, decisions: nextDecisions },
-          `決定事項「${cleanTitle}」を編集しました`
+          `決定事項「${cleanTitle}」（重要度: ${impMeta.short}）を編集しました`
         );
       }
     });
@@ -1465,6 +1649,69 @@ export default function App() {
         commitState(
           { ...boardState, decisions: nextDecisions },
           `決定事項「${title}」を削除しました`
+        );
+      }
+    });
+  };
+
+  // 決定事項の各項目の上下並び替え
+  const moveDecisionItem = (catId, decId, direction) => {
+    const cat = boardState.decisions.find((c) => c.id === catId);
+    if (!cat) return;
+    const idx = cat.items.findIndex((i) => i.id === decId);
+    if (idx === -1) return;
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= cat.items.length) return;
+
+    const nextItems = [...cat.items];
+    const tmp = nextItems[idx];
+    nextItems[idx] = nextItems[targetIdx];
+    nextItems[targetIdx] = tmp;
+
+    const nextDecisions = boardState.decisions.map((c) =>
+      c.id === catId ? { ...c, items: nextItems } : c
+    );
+    setDecisionSortMode("manual");
+    commitState(
+      { ...boardState, decisions: nextDecisions },
+      `決定事項「${tmp.title}」の表示順を並び替えました`
+    );
+  };
+
+  // 決定事項のカテゴリ（見出し）全体の上下並び替え
+  const moveCategory = (catId, direction) => {
+    const idx = boardState.decisions.findIndex((c) => c.id === catId);
+    if (idx === -1) return;
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= boardState.decisions.length) return;
+
+    const nextDecisions = [...boardState.decisions];
+    const tmp = nextDecisions[idx];
+    nextDecisions[idx] = nextDecisions[targetIdx];
+    nextDecisions[targetIdx] = tmp;
+    commitState(
+      { ...boardState, decisions: nextDecisions },
+      `カテゴリ見出し「${tmp.category}」の表示順を並び替えました`
+    );
+  };
+
+  // 決定事項を選択中の並び順（追加順・重要度順）で一括確定保存
+  const applyPermanentDecisionSort = (mode) => {
+    const effectiveMode = mode === "manual" ? "imp_desc" : mode;
+    const modeLabel = SORT_MODE_LABELS[effectiveMode] || effectiveMode;
+    requestConfirm({
+      title: "決定事項の並び順を一括更新",
+      message: `各カテゴリ内の決定事項を「${modeLabel}」で並び替えて保存しますか？`,
+      confirmLabel: "並び替えて保存する",
+      onConfirm: () => {
+        const nextDecisions = boardState.decisions.map((cat) => ({
+          ...cat,
+          items: [...cat.items].sort((a, b) => compareItems(a, b, effectiveMode))
+        }));
+        setDecisionSortMode("manual");
+        commitState(
+          { ...boardState, decisions: nextDecisions },
+          `決定事項を「${modeLabel}」に並び替えました`
         );
       }
     });
@@ -1516,19 +1763,22 @@ export default function App() {
     boardState.decisions.forEach((cat) => {
       decHtml += `<h3 style="color:#2b579a;margin-top:12pt;margin-bottom:4pt;">${esc(cat.category)}</h3><ul>`;
       cat.items.forEach((it) => {
-        decHtml += `<li style="margin-bottom:4pt;"><b>${esc(it.title)}：</b>${esc(it.content)}</li>`;
+        const imp = Number(it.importance) || 0;
+        const impText = imp > 0 ? `<span style="color:#c62828;font-weight:bold;">[重要度★${imp}] </span>` : "";
+        decHtml += `<li style="margin-bottom:4pt;">${impText}<b>${esc(it.title)}：</b>${esc(it.content)}</li>`;
       });
       decHtml += `</ul>`;
     });
 
     const makeRows = (arr, symbol) =>
       arr
-        .map(
-          (t) =>
-            `<tr><td style="text-align:center;width:36pt;">${symbol}</td><td style="font-weight:bold;width:110pt;">${esc(
-              t.who
-            )}</td><td style="width:95pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`
-        )
+        .map((t) => {
+          const imp = Number(t.importance) || 0;
+          const impLabel = imp > 0 ? `★${imp}` : "なし";
+          return `<tr><td style="text-align:center;width:32pt;">${symbol}</td><td style="text-align:center;width:45pt;font-weight:bold;">${impLabel}</td><td style="font-weight:bold;width:105pt;">${esc(
+            t.who
+          )}</td><td style="width:90pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`;
+        })
         .join("");
 
     const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -1537,9 +1787,9 @@ export default function App() {
       <body>
         <h1>2026年10月〜11月11日 幹文連・幹部代会議 統合総括</h1>
         <h2>1. これから誰がいつまでに何をやるか（やるべきことリスト / ToDo）</h2>
-        <table><tr><th>完了</th><th>誰が</th><th>いつまでに</th><th>何をやるか</th></tr>${makeRows(todoList, "☐")}</table>
+        <table><tr><th>完了</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>何をやるか</th></tr>${makeRows(todoList, "☐")}</table>
         <h2>2. すでに終わっているはずのこと（完了済みリスト）</h2>
-        <table><tr><th>完了</th><th>誰が</th><th>いつまでに</th><th>何をやったか</th></tr>${makeRows(doneList, "☑")}</table>
+        <table><tr><th>完了</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>何をやったか</th></tr>${makeRows(doneList, "☑")}</table>
         <h2>3. 今まで決まったこと</h2>
         ${decHtml}
       </body></html>`;
@@ -1551,22 +1801,49 @@ export default function App() {
     a.click();
   };
 
-  // --- 集計＆フィルタリング ---
+  // --- 集計＆フィルタリング＆ソート ---
+  const matchImportanceFilter = (impValue) => {
+    const imp = Number(impValue) || 0;
+    if (filterImportance === "ALL") return true;
+    if (filterImportance === "HAS_IMP") return imp >= 1;
+    if (filterImportance === "NONE") return imp === 0;
+    if (filterImportance === "5") return imp === 5;
+    if (filterImportance === "4_UP") return imp >= 4;
+    if (filterImportance === "3_UP") return imp >= 3;
+    return true;
+  };
+
   const { todoList, doneList, myTodoList, myDoneList, totalDecisions } = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const matchTask = (t) => {
       const matchWho = filterWho === "ALL" || t.who.includes(filterWho);
+      const matchImp = matchImportanceFilter(t.importance);
       const matchQ =
         !q ||
         t.who.toLowerCase().includes(q) ||
         t.when.toLowerCase().includes(q) ||
         t.what.toLowerCase().includes(q);
-      return matchWho && matchQ;
+      return matchWho && matchImp && matchQ;
     };
-    const todos = boardState.tasks.filter((t) => !t.completed && matchTask(t));
-    const dones = boardState.tasks.filter((t) => t.completed && matchTask(t));
-    const myTodos = boardState.tasks.filter((t) => !t.completed && isTaskForMember(t.who, currentMemberObj));
-    const myDones = boardState.tasks.filter((t) => t.completed && isTaskForMember(t.who, currentMemberObj));
+
+    let todos = boardState.tasks.filter((t) => !t.completed && matchTask(t));
+    let dones = boardState.tasks.filter((t) => t.completed && matchTask(t));
+    let myTodos = boardState.tasks.filter(
+      (t) => !t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance)
+    );
+    let myDones = boardState.tasks.filter(
+      (t) => t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance)
+    );
+
+    if (todoSortMode !== "manual") {
+      todos = [...todos].sort((a, b) => compareItems(a, b, todoSortMode));
+      myTodos = [...myTodos].sort((a, b) => compareItems(a, b, todoSortMode));
+    }
+    if (doneSortMode !== "manual") {
+      dones = [...dones].sort((a, b) => compareItems(a, b, doneSortMode));
+      myDones = [...myDones].sort((a, b) => compareItems(a, b, doneSortMode));
+    }
+
     const decCount = boardState.decisions.reduce((acc, c) => acc + c.items.length, 0);
     return {
       todoList: todos,
@@ -1575,7 +1852,7 @@ export default function App() {
       myDoneList: myDones,
       totalDecisions: decCount
     };
-  }, [boardState, searchQuery, filterWho, currentMemberObj]);
+  }, [boardState, searchQuery, filterWho, filterImportance, currentMemberObj, todoSortMode, doneSortMode]);
 
   const allUncompletedCount = boardState.tasks.filter((t) => !t.completed).length;
   const allCompletedCount = boardState.tasks.filter((t) => t.completed).length;
@@ -1587,12 +1864,17 @@ export default function App() {
   // タスク行の共通レンダラー
   const renderTaskCard = (t) => {
     const isEditing = editingTaskId === t.id;
+    const imp = Number(t.importance) || 0;
     return (
       <div
         key={t.id}
         className={`group border rounded-2xl p-3.5 transition shadow-xs flex items-start gap-3 ${
           t.completed
             ? "bg-emerald-50/40 border-emerald-200/80"
+            : imp === 5
+            ? "bg-rose-50/30 hover:bg-rose-50/50 border-rose-200"
+            : imp === 4
+            ? "bg-orange-50/20 hover:bg-orange-50/40 border-orange-200"
             : "bg-white hover:bg-blue-50/30 border-slate-200"
         }`}
       >
@@ -1624,6 +1906,11 @@ export default function App() {
               freeText={editTaskWhenFree}
               setFreeText={setEditTaskWhenFree}
             />
+            <ImportanceSelector
+              value={editTaskImportance}
+              onChange={setEditTaskImportance}
+              label="重要度（1〜5 / なし）"
+            />
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">何をやるか（内容）</label>
               <textarea
@@ -1653,6 +1940,7 @@ export default function App() {
         ) : (
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 mb-1">
+              <ImportanceBadge importance={t.importance} />
               <span
                 className={`font-bold text-xs px-2.5 py-0.5 rounded-lg border ${
                   t.completed
@@ -1682,7 +1970,23 @@ export default function App() {
         )}
 
         {!isEditing && (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => moveTask(t.id, -1)}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+              title="上へ移動"
+            >
+              <ArrowUp size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveTask(t.id, 1)}
+              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+              title="下へ移動"
+            >
+              <ArrowDown size={14} />
+            </button>
             <button
               type="button"
               onClick={() => startEditTask(t)}
@@ -1693,22 +1997,6 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => moveTask(t.id, -1)}
-              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg hidden sm:inline-flex"
-              title="上へ移動"
-            >
-              <ArrowUp size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveTask(t.id, 1)}
-              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg hidden sm:inline-flex"
-              title="下へ移動"
-            >
-              <ArrowDown size={14} />
-            </button>
-            <button
-              type="button"
               onClick={() => deleteTask(t.id)}
               className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               title="削除"
@@ -1716,6 +2004,56 @@ export default function App() {
               <Trash2 size={14} />
             </button>
           </div>
+        )}
+      </div>
+    );
+  };
+
+  // リストの並び替えコントロールバー共通コンポーネント（追加順［昇順・降順］対応）
+  const renderSortToolbar = (sortMode, setSortMode, onPermanentSort, includeWhoSort = true) => {
+    const sortButtons = [
+      { id: "manual", label: "手動順（↑↓）" },
+      { id: "added_asc", label: "🕒追加順（昇順：古い→新）" },
+      { id: "added_desc", label: "🕒追加順（降順：新→古い）" },
+      { id: "imp_desc", label: "★重要度が高い順" },
+      { id: "imp_asc", label: "★重要度が低い順" }
+    ];
+    if (includeWhoSort) {
+      sortButtons.push({ id: "who_asc", label: "👤担当者順" });
+    }
+    const targetSaveMode = sortMode === "manual" ? "imp_desc" : sortMode;
+
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 mb-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1 mr-1">
+            <ArrowUpDown size={13} className="text-indigo-600" />
+            <span>並び替え:</span>
+          </span>
+          {sortButtons.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setSortMode(opt.id)}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${
+                sortMode === opt.id
+                  ? "bg-indigo-600 text-white shadow-2xs"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {onPermanentSort && (
+          <button
+            type="button"
+            onClick={() => onPermanentSort(targetSaveMode)}
+            className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-xl transition"
+            title="選択中の並び順で全員の画面の並び順そのものを上書き保存します"
+          >
+            ⚡ {sortMode === "manual" ? "重要度順で確定保存" : "この並び順で確定保存"}
+          </button>
         )}
       </div>
     );
@@ -1870,7 +2208,7 @@ export default function App() {
         {/* 上部クイックタブ切替バー */}
         <div className="bg-white rounded-2xl p-2 shadow-xs border border-slate-200 flex flex-wrap gap-1.5">
           {[
-            { id: "mypage", label: `👤 マイページ (${myTodoList.length})`, badgeColor: "bg-indigo-600 text-white" },
+            { id: "mypage", label: `👤 マイページ (${myTodoList.length})` },
             { id: "all", label: "✨ 全体ボード（すべて表示）" },
             { id: "tasks", label: `✅ 全体ToDo (${allUncompletedCount})` },
             { id: "decisions", label: `📋 決定事項 (${totalDecisions})` },
@@ -1921,14 +2259,13 @@ export default function App() {
                   className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
                 >
                   <Shield size={14} />
-                  <span>📋 全体の役職・担当表を見る</span>
+                  <span>📋 全体の役職・担当表（写真）を見る</span>
                 </button>
               </div>
 
-              {/* 自分の役職バッジ一覧 */}
               <div>
                 <div className="text-xs font-bold text-slate-600 mb-2">
-                  🏷️ あなたの担当役職：
+                  🏷️ あなたの担当役職（写真の表より自動反映）：
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {currentMemberObj.roles.map((role) => {
@@ -1979,6 +2316,14 @@ export default function App() {
                 </div>
               </div>
 
+              {/* マイページ内の並び替えバー（追加順 昇順・降順 対応） */}
+              {renderSortToolbar(
+                todoSortMode,
+                setTodoSortMode,
+                (mode) => applyPermanentTaskSort(false, mode),
+                true
+              )}
+
               <div className="space-y-2.5">
                 {myTodoList.length === 0 ? (
                   <div className="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
@@ -2018,7 +2363,6 @@ export default function App() {
                 </span>
               </div>
 
-              {/* 新規メモ追加フォーム */}
               <div className="bg-amber-50/50 border border-dashed border-amber-300 rounded-2xl p-3.5 space-y-2.5">
                 <input
                   type="text"
@@ -2045,7 +2389,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 保存済みメモ一覧 */}
               <div className="space-y-2.5">
                 {userMemoList.length === 0 ? (
                   <div className="text-center py-6 text-slate-400 text-xs">
@@ -2131,7 +2474,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 進捗サマリーバー ＆ 検索・フィルター */}
+        {/* 進捗サマリーバー ＆ 検索・担当者・重要度フィルター */}
         {activeTab !== "mypage" && (
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2159,13 +2502,13 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative flex-1 min-w-[180px]">
                 <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="キーワードで検索（例：マーシャル、2月ライブ、溝上...）"
+                  placeholder="キーワード検索（例：マーシャル、2月ライブ、溝上...）"
                   className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -2182,12 +2525,25 @@ export default function App() {
                   </option>
                 ))}
               </select>
-              {(searchQuery || filterWho !== "ALL") && (
+              <select
+                value={filterImportance}
+                onChange={(e) => setFilterImportance(e.target.value)}
+                className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-900"
+              >
+                <option value="ALL">★ 重要度：すべて表示</option>
+                <option value="5">★5（最優先）のみ</option>
+                <option value="4_UP">★4以上（高〜最優先）</option>
+                <option value="3_UP">★3以上（中〜最優先）</option>
+                <option value="HAS_IMP">★重要度あり（★1〜★5）</option>
+                <option value="NONE">重要度なしのみ</option>
+              </select>
+              {(searchQuery || filterWho !== "ALL" || filterImportance !== "ALL") && (
                 <button
                   type="button"
                   onClick={() => {
                     setSearchQuery("");
                     setFilterWho("ALL");
+                    setFilterImportance("ALL");
                   }}
                   className="text-xs text-indigo-600 font-bold px-2 py-1 hover:underline"
                 >
@@ -2215,7 +2571,7 @@ export default function App() {
               </span>
             </div>
 
-            {/* 新規ToDo追加パネル（名前・役職複数選択＋自由記述、カレンダー日付選択＋自由記述） */}
+            {/* 新規ToDo追加パネル */}
             <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 mb-5 space-y-3.5">
               <div className="text-xs font-bold text-indigo-950 flex items-center justify-between flex-wrap gap-2">
                 <span className="flex items-center gap-1.5">
@@ -2235,7 +2591,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* 誰が：名前・役職の選択＋自由記述 */}
               <WhoSelector
                 selectedNames={newTaskNames}
                 setSelectedNames={setNewTaskNames}
@@ -2245,7 +2600,6 @@ export default function App() {
                 setFreeText={setNewTaskWhoFree}
               />
 
-              {/* いつまで：カレンダー日付選択＋自由記述 */}
               <WhenSelector
                 selectedDates={newTaskDates}
                 setSelectedDates={setNewTaskDates}
@@ -2253,7 +2607,12 @@ export default function App() {
                 setFreeText={setNewTaskWhenFree}
               />
 
-              {/* 何をやるか */}
+              <ImportanceSelector
+                value={newTaskImportance}
+                onChange={setNewTaskImportance}
+                label="重要度を設定（1〜5 / 設定なしもOK）"
+              />
+
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700">
                   📝 何をやるか（具体的なタスク内容）
@@ -2285,23 +2644,30 @@ export default function App() {
               </div>
             </div>
 
-            {/* 全体ToDo一覧（マイページタブのときは上の自分専用リストがあるため折りたたみまたは一覧表示） */}
             {activeTab !== "mypage" && (
-              <div className="space-y-2.5">
-                {todoList.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    該当する未完了タスクはありません 🎉
-                  </div>
-                ) : (
-                  todoList.map((t) => renderTaskCard(t))
+              <>
+                {renderSortToolbar(
+                  todoSortMode,
+                  setTodoSortMode,
+                  (mode) => applyPermanentTaskSort(false, mode),
+                  true
                 )}
-              </div>
+                <div className="space-y-2.5">
+                  {todoList.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      該当する未完了タスクはありません 🎉
+                    </div>
+                  ) : (
+                    todoList.map((t) => renderTaskCard(t))
+                  )}
+                </div>
+              </>
             )}
           </section>
         )}
 
         {/* =================================================================== */}
-        {/* 2. すでに終わっているはずのこと（完了済みリスト） */}
+        {/* 2. すでに終わっているはずのこと（完了済みリスト / 並び替え対応） */}
         {/* =================================================================== */}
         {(activeTab === "all" || activeTab === "tasks") && (
           <section className="bg-white rounded-3xl p-5 shadow-sm border border-emerald-200">
@@ -2317,6 +2683,14 @@ export default function App() {
               </span>
             </div>
 
+            {/* 完了済みリスト用の並び替えバー（追加順 昇順・降順 対応） */}
+            {renderSortToolbar(
+              doneSortMode,
+              setDoneSortMode,
+              (mode) => applyPermanentTaskSort(true, mode),
+              true
+            )}
+
             <div className="space-y-2">
               {doneList.length === 0 ? (
                 <div className="text-center py-6 text-slate-400 text-xs">完了済みのタスクはありません</div>
@@ -2328,7 +2702,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* 3. 今まで決まったこと（新しい選択肢の自由追加・追加入力・編集対応） */}
+        {/* 3. 今まで決まったこと（重要度設定 ＆ 追加順［昇順・降順］並び替え対応） */}
         {/* =================================================================== */}
         {(activeTab === "all" || activeTab === "decisions") && (
           <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
@@ -2336,7 +2710,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <FileText className="text-indigo-900" size={22} />
                 <h2 className="text-base sm:text-lg font-bold text-indigo-950">
-                  3. 今まで決まったこと（今後の会議の選択肢も自由に追加可能）
+                  3. 今まで決まったこと（重要度設定・並び替え・選択肢追加対応）
                 </h2>
               </div>
               <button
@@ -2352,7 +2726,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 mb-5 space-y-3">
+            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 mb-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                   <Sparkles size={15} className="text-indigo-600" />
@@ -2441,132 +2815,227 @@ export default function App() {
                   value={newDecContent}
                   onChange={(e) => setNewDecContent(e.target.value)}
                   placeholder="決まった内容（例：3回生以下は最大3バンドまでに決定）"
-                  className="sm:col-span-3 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
+                  className="sm:col-span-5 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
                 />
+              </div>
 
+              <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
+                <ImportanceSelector
+                  value={newDecImportance}
+                  onChange={setNewDecImportance}
+                  label="決定事項の重要度（1〜5 / 設定なしもOK）"
+                />
                 <button
                   type="button"
                   onClick={handleAddDecision}
-                  className="sm:col-span-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-sm transition"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-sm transition"
                 >
                   ＋ 決定事項を追加
                 </button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              {boardState.decisions.map((cat) => (
-                <div
-                  key={cat.id}
-                  className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
-                    <h3
-                      onClick={() => editCategoryName(cat.id, cat.category)}
-                      className="text-sm sm:text-base font-bold text-indigo-800 cursor-pointer hover:underline"
-                    >
-                      {cat.category}
-                    </h3>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => editCategoryName(cat.id, cat.category)}
-                        className="text-[11px] text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 font-medium"
-                      >
-                        ✏️ 見出し編集
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteCategory(cat.id, cat.category)}
-                        className="text-[11px] text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
+            {/* 決定事項の並び替えコントロールバー（追加順 昇順・降順 対応） */}
+            {renderSortToolbar(
+              decisionSortMode,
+              setDecisionSortMode,
+              (mode) => applyPermanentDecisionSort(mode),
+              false
+            )}
 
-                  <ul className="space-y-2">
-                    {cat.items.length === 0 ? (
-                      <li className="text-xs text-slate-400 py-2">
-                        （まだ項目がありません。上のフォームから追加入力できます）
-                      </li>
-                    ) : (
-                      cat.items.map((item) => (
-                        <li
-                          key={item.id}
-                          className="flex items-start justify-between gap-2 p-2 rounded-xl hover:bg-slate-50 border-b border-slate-100 last:border-none"
+            <div className="space-y-4">
+              {boardState.decisions.map((cat) => {
+                const q = searchQuery.trim().toLowerCase();
+                let visibleItems = cat.items.filter((it) => {
+                  const matchImp = matchImportanceFilter(it.importance);
+                  const matchQ =
+                    !q ||
+                    it.title.toLowerCase().includes(q) ||
+                    it.content.toLowerCase().includes(q) ||
+                    cat.category.toLowerCase().includes(q);
+                  return matchImp && matchQ;
+                });
+
+                if (decisionSortMode !== "manual") {
+                  visibleItems = [...visibleItems].sort((a, b) =>
+                    compareItems(a, b, decisionSortMode)
+                  );
+                }
+
+                return (
+                  <div
+                    key={cat.id}
+                    className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
+                      <h3
+                        onClick={() => editCategoryName(cat.id, cat.category)}
+                        className="text-sm sm:text-base font-bold text-indigo-800 cursor-pointer hover:underline"
+                      >
+                        {cat.category}
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(cat.id, -1)}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                          title="このカテゴリ見出しを上へ移動"
                         >
-                          {editingDecId === item.id ? (
-                            <div className="flex-1 space-y-2 bg-slate-50 p-3 rounded-xl border border-indigo-200">
-                              <input
-                                type="text"
-                                value={editDecForm.title}
-                                onChange={(e) => setEditDecForm({ ...editDecForm, title: e.target.value })}
-                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold"
-                                placeholder="項目名"
-                              />
-                              <textarea
-                                rows={2}
-                                value={editDecForm.content}
-                                onChange={(e) => setEditDecForm({ ...editDecForm, content: e.target.value })}
-                                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                                placeholder="決まった内容"
-                              />
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingDecId(null)}
-                                  className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
-                                >
-                                  取消
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => saveEditDecision(cat.id, item.id)}
-                                  className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold"
-                                >
-                                  💾 編集完了（保存）
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div
-                                onClick={() => startEditDecision(item)}
-                                className="flex-1 text-xs sm:text-sm leading-relaxed cursor-pointer"
-                              >
-                                <span className="font-bold text-slate-900">{item.title}：</span>
-                                <span className="text-slate-700 whitespace-pre-wrap">{item.content}</span>
-                                {item.updatedBy && (
-                                  <span className="ml-2 text-[10px] text-slate-400">
-                                    (更新: {item.updatedBy} {item.updatedAt})
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditDecision(item)}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 rounded"
-                                >
-                                  <Edit2 size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => deleteDecision(cat.id, item.id, item.title)}
-                                  className="p-1 text-slate-400 hover:text-red-600 rounded"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </>
-                          )}
+                          <ArrowUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveCategory(cat.id, 1)}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                          title="このカテゴリ見出しを下へ移動"
+                        >
+                          <ArrowDown size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => editCategoryName(cat.id, cat.category)}
+                          className="text-[11px] text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 font-medium"
+                        >
+                          ✏️ 見出し編集
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteCategory(cat.id, cat.category)}
+                          className="text-[11px] text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2">
+                      {visibleItems.length === 0 ? (
+                        <li className="text-xs text-slate-400 py-2">
+                          （該当する決定事項がありません）
                         </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              ))}
+                      ) : (
+                        visibleItems.map((item) => {
+                          const imp = Number(item.importance) || 0;
+                          return (
+                            <li
+                              key={item.id}
+                              className={`flex items-start justify-between gap-2 p-2.5 rounded-xl border transition ${
+                                imp === 5
+                                  ? "bg-rose-50/30 border-rose-200"
+                                  : imp === 4
+                                  ? "bg-orange-50/20 border-orange-200"
+                                  : "hover:bg-slate-50 border-slate-100"
+                              }`}
+                            >
+                              {editingDecId === item.id ? (
+                                <div className="flex-1 space-y-2.5 bg-slate-50 p-3 rounded-xl border border-indigo-200">
+                                  <input
+                                    type="text"
+                                    value={editDecForm.title}
+                                    onChange={(e) =>
+                                      setEditDecForm({ ...editDecForm, title: e.target.value })
+                                    }
+                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold"
+                                    placeholder="項目名"
+                                  />
+                                  <ImportanceSelector
+                                    value={editDecForm.importance}
+                                    onChange={(val) =>
+                                      setEditDecForm({ ...editDecForm, importance: val })
+                                    }
+                                    label="重要度（1〜5 / なし）"
+                                  />
+                                  <textarea
+                                    rows={2}
+                                    value={editDecForm.content}
+                                    onChange={(e) =>
+                                      setEditDecForm({ ...editDecForm, content: e.target.value })
+                                    }
+                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                                    placeholder="決まった内容"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingDecId(null)}
+                                      className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
+                                    >
+                                      取消
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => saveEditDecision(cat.id, item.id)}
+                                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                                    >
+                                      💾 編集完了（保存）
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div
+                                    onClick={() => startEditDecision(item)}
+                                    className="flex-1 text-xs sm:text-sm leading-relaxed cursor-pointer"
+                                  >
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                      <ImportanceBadge importance={item.importance} />
+                                      <span className="font-bold text-slate-900">
+                                        {item.title}：
+                                      </span>
+                                    </div>
+                                    <span className="text-slate-700 whitespace-pre-wrap">
+                                      {item.content}
+                                    </span>
+                                    {item.updatedBy && (
+                                      <span className="ml-2 text-[10px] text-slate-400">
+                                        (更新: {item.updatedBy} {item.updatedAt})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveDecisionItem(cat.id, item.id, -1)}
+                                      className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded"
+                                      title="上へ移動"
+                                    >
+                                      <ArrowUp size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveDecisionItem(cat.id, item.id, 1)}
+                                      className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded"
+                                      title="下へ移動"
+                                    >
+                                      <ArrowDown size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditDecision(item)}
+                                      className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                                      title="編集"
+                                    >
+                                      <Edit2 size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteDecision(cat.id, item.id, item.title)}
+                                      className="p-1 text-slate-400 hover:text-red-600 rounded"
+                                      title="削除"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </li>
+                          );
+                        })
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -2650,7 +3119,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 役職一覧表モーダル */}
+      {/* 写真の役職一覧表モーダル */}
       {showRoleTableModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
