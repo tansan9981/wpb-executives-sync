@@ -749,7 +749,7 @@ function WhoSelector({
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              🏷️ 役職から選ぶ（写真の表）
+              🏷️ 役職から選ぶ
             </button>
           </div>
 
@@ -2259,13 +2259,13 @@ export default function App() {
                   className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
                 >
                   <Shield size={14} />
-                  <span>📋 全体の役職・担当表（写真）を見る</span>
+                  <span>📋 全体の役職・担当表を見る</span>
                 </button>
               </div>
 
               <div>
                 <div className="text-xs font-bold text-slate-600 mb-2">
-                  🏷️ あなたの担当役職（写真の表より自動反映）：
+                  🏷️ あなたの担当役職：
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {currentMemberObj.roles.map((role) => {
@@ -3119,7 +3119,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 写真の役職一覧表モーダル */}
+      {/* 役職一覧表モーダル */}
       {showRoleTableModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
