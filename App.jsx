@@ -26,44 +26,146 @@ try {
 }
 
 const SYNC_COLLECTION = "kanbu_sync";
-const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v1";
-const USER_NAME_KEY = "wpb_kanbu_sync_username";
+const SYNC_DOC_ID = "board_2026_11_v2";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v2";
+const USER_NAME_KEY = "wpb_kanbu_sync_username_v2";
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
 
-// 幹部代メンバー候補
-const KANBU_MEMBERS = [
-  "小林 秀星", "安部 建人", "渡会 侑希", "ほのか", "大樹（たいき）",
-  "杉原 和貴", "蓮（れん）", "しゅうま", "亀谷", "滑川 優斗",
-  "春日 京介", "弘田 隼大", "朝井 啓人（ちりつ）", "平野 春音",
-  "三春（みはる）", "靖隆（やす）", "菜純（なすみ）", "かんえつ", "ゆうり"
+// 2回生（同期・幹部代 20名）公式名簿
+const MEMBERS_2KAISE = [
+  "小川 美晴", "渡会 啓人", "安部 建人", "小島 大幹", "杉原 和貴",
+  "溝上 萌乃佳", "森 柊実", "亀谷 博昭", "小林 秀星", "清水 康貴",
+  "大橋 菜純", "朱 函悦", "滑川 優斗", "春日 京介", "弘田 隼大",
+  "松尾 知律", "浦山 大樹", "平野 春音", "武捨 裕吏", "大場 怜"
 ];
 
-// --- 初期データ（2026年10月〜11月11日 全会議統合） ---
+// 1回生（後輩 21名）公式名簿
+const MEMBERS_1KAISE = [
+  "讃岐 衣純", "高橋 由都", "東そらユーゴ", "石坂 旭", "衣斐 真仁",
+  "柴 敏皓", "豊川 陽", "成田 涼真", "若林 周", "東川 颯希",
+  "二木 樺", "伊藤 大賀", "松村 恭佑", "YANG KERAN", "渡邉 晴人",
+  "本山 莉彩", "岡井 涼太", "岡本 茉麻", "工藤 暢々花", "田中 杏奈", "前澤 恵恋"
+];
+
+// 旧表記・あだ名から公式氏名への自動置換ルール
+const NAME_REPLACEMENTS = [
+  ["渡会 侑希", "渡会 啓人"],
+  ["渡会侑希", "渡会 啓人"],
+  ["渡会（わたらい）", "渡会 啓人"],
+  ["朝井 啓人（ちりつ）", "松尾 知律"],
+  ["朝井啓人（ちりつ）", "松尾 知律"],
+  ["朝井 啓人", "松尾 知律"],
+  ["朝井啓人", "松尾 知律"],
+  ["ちりつ", "松尾 知律"],
+  ["こじだい（小時代）", "小島 大幹"],
+  ["小時代", "小島 大幹"],
+  ["こじだい", "小島 大幹"],
+  ["大樹（たいき・機材統括）", "浦山 大樹（機材統括）"],
+  ["大樹（機材統括）", "浦山 大樹（機材統括）"],
+  ["大樹（たいき）", "浦山 大樹"],
+  ["たいき", "浦山 大樹"],
+  ["ほのか（庶務）", "溝上 萌乃佳（庶務）"],
+  ["ほのか", "溝上 萌乃佳"],
+  ["れん（照明設営）", "大場 怜（照明設営）"],
+  ["蓮（照明設営）", "大場 怜（照明設営）"],
+  ["照明（れん）", "大場 怜（照明）"],
+  ["照明（蓮）", "大場 怜（照明）"],
+  ["蓮（れん）", "大場 怜"],
+  ["れん・みはる", "大場 怜・小川 美晴"],
+  ["三春（みはる）", "小川 美晴"],
+  ["三春", "小川 美晴"],
+  ["みはる", "小川 美晴"],
+  ["しゅうま・わたらい", "森 柊実・渡会 啓人"],
+  ["しゅうま", "森 柊実"],
+  ["舞台（亀谷）", "亀谷 博昭（舞台）"],
+  ["亀谷（舞台）", "亀谷 博昭（舞台）"],
+  ["小林 秀星・亀谷", "小林 秀星・亀谷 博昭"],
+  ["小林秀星・亀谷", "小林 秀星・亀谷 博昭"],
+  ["亀谷は冗談", "亀谷 博昭は冗談"],
+  ["滑川優斗（なめこ）", "滑川 優斗"],
+  ["滑川（なめこ）", "滑川 優斗"],
+  ["かんえつ", "朱 函悦"],
+  ["靖隆（やす）", "清水 康貴"],
+  ["靖隆", "清水 康貴"],
+  ["菜純（なすみ）", "大橋 菜純"],
+  ["ゆうり", "武捨 裕吏"],
+  ["さつき・りさ", "東川 颯希・本山 莉彩"],
+  ["さつきちゃん", "東川 颯希"],
+  ["いずみちゃん", "讃岐 衣純"],
+  ["優斗とりさ", "高橋 由都と本山 莉彩"],
+  ["兼任者ゆうご", "兼任者の東そらユーゴ"],
+  ["兼任のゆうご", "兼任の東そらユーゴ"],
+  ["小林 秀星（しゅうせい）", "小林 秀星"],
+  ["小林秀星（こばしゅう）", "小林 秀星"],
+  ["杉原 和貴（かずき）", "杉原 和貴"],
+  ["弘田隼大（ひろはや）", "弘田 隼大"]
+];
+
+function normalizeText(str) {
+  if (!str || typeof str !== "string") return str;
+  let out = str;
+  for (const [oldStr, newStr] of NAME_REPLACEMENTS) {
+    out = out.split(oldStr).join(newStr);
+  }
+  if (out === "渡会" || out === "わたらい") out = "渡会 啓人";
+  if (out === "亀谷" || out === "かめがい") out = "亀谷 博昭";
+  if (out === "大樹") out = "浦山 大樹";
+  if (out === "蓮" || out === "れん") out = "大場 怜";
+  return out;
+}
+
+function normalizeStateNames(stateObj) {
+  if (!stateObj) return stateObj;
+  const tasks = Array.isArray(stateObj.tasks)
+    ? stateObj.tasks.map((t) => ({
+        ...t,
+        who: normalizeText(t.who),
+        when: normalizeText(t.when),
+        what: normalizeText(t.what),
+        updatedBy: normalizeText(t.updatedBy)
+      }))
+    : [];
+  const decisions = Array.isArray(stateObj.decisions)
+    ? stateObj.decisions.map((cat) => ({
+        ...cat,
+        category: normalizeText(cat.category),
+        items: Array.isArray(cat.items)
+          ? cat.items.map((it) => ({
+              ...it,
+              title: normalizeText(it.title),
+              content: normalizeText(it.content),
+              updatedBy: normalizeText(it.updatedBy)
+            }))
+          : []
+      }))
+    : [];
+  return { ...stateObj, tasks, decisions };
+}
+
 const INITIAL_STATE = {
   tasks: [
-    { id: "todo-1", who: "小林 秀星（しゅうせい）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-2", who: "動画編集に協力できる人（程よく仕事がない人）", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（かんえつの補助・あと2〜3名）について、小林秀星（こばしゅう）へ個別LINEで連絡する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-3", who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-1", who: "小林 秀星", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-2", who: "動画編集に協力できる人（程よく仕事がない人）", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱 函悦の補助・あと2〜3名）について、小林 秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-3", who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部 建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-4", who: "現幹部（共有：安部 建人）", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-5", who: "渡会", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-5", who: "渡会 啓人", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-6", who: "各パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-7", who: "幹部代全員（＋杉原 和貴）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-7", who: "幹部代全員（＋杉原 和貴）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原 和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：東川 颯希・本山 莉彩の抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者の東そらユーゴの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-8", who: "杉原 和貴", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-9", who: "ほのか", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-9", who: "溝上 萌乃佳", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-10", who: "PA・照明・カメラ・機材購入担当", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-11", who: "たいき", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-12", who: "れん（照明設営）", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-13", who: "安部 建人（部長）・舞台（亀谷）・照明（れん）", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-11", who: "浦山 大樹", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-12", who: "大場 怜（照明設営）", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-13", who: "安部 建人（部長）・亀谷 博昭（舞台）・大場 怜（照明）", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部 建人が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-14", who: "安部 建人・杉原 和貴", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-15", who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-16", who: "幹部代全員（ALL）", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-17", who: "幹部代メンバー", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-18", who: "幹部代全員（特にセクションリーダー）", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "done-1", who: "全体（幹部代）", when: "11/6（枠決め）前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-2", who: "小林 秀星・亀谷（全体）", when: "11/6（金）19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-2", who: "小林 秀星・亀谷 博昭（全体）", when: "11/6（金）19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, updatedBy: "初期データ", updatedAt: "11/06" },
     { id: "done-3", who: "安部 建人・小林 秀星 ほか", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-4", who: "平野 春音（配達先：安部宅）", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, updatedBy: "初期データ", updatedAt: "11/01" },
+    { id: "done-4", who: "平野 春音（配達先：安部 建人宅）", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部 建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, updatedBy: "初期データ", updatedAt: "11/01" },
     { id: "done-5", who: "幹文連・全員（ALL）", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, updatedBy: "初期データ", updatedAt: "10/14" },
     { id: "done-6", who: "次期幹文連メンバー・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, updatedBy: "初期データ", updatedAt: "11/11" }
   ],
@@ -72,10 +174,10 @@ const INITIAL_STATE = {
       id: "cat-1",
       category: "■ 役職補佐・会議の役割分担と基本ルール",
       items: [
-        { id: "dec-101", title: "幹部補佐の決定（10/5幹文連）", content: "総務補佐＝「こじだい（小時代）」、渉外補佐＝「れん・みはる」、会計補佐＝「しゅうま・わたらい」（しゅうまの差し入れ等の懸念も確認し問題なしと判断）。" },
-        { id: "dec-102", title: "会議・枠決めの役割分担（10/14幹部代）", content: "枠決め司会＝「小林秀星・亀谷」の2名体制、黒板（板書）係＝「滑川優斗（なめこ）」、議事録係＝「小林秀星・渡会侑希」の2名体制、タイムキーパー＝会議進行役の「安部建人」が兼任。" },
+        { id: "dec-101", title: "幹部補佐の決定（10/5幹文連）", content: "総務補佐＝「小島 大幹」、渉外補佐＝「大場 怜・小川 美晴」、会計補佐＝「森 柊実・渡会 啓人」（森 柊実の差し入れ等の懸念も確認し問題なしと判断）。" },
+        { id: "dec-102", title: "会議・枠決めの役割分担（10/14幹部代）", content: "枠決め司会＝「小林 秀星・亀谷 博昭」の2名体制、黒板（板書）係＝「滑川 優斗」、議事録係＝「小林 秀星・渡会 啓人」の2名体制、タイムキーパー＝会議進行役の「安部 建人」が兼任。" },
         { id: "dec-103", title: "会議の進行方法（10/14幹文連）", content: "全員が揃った上で、アジェンダの上から順番通りに議論を進める。" },
-        { id: "dec-104", title: "欠席・遅刻の原則禁止と連絡先（11/11幹部代）", content: "人数が少なく投票の信憑性を保つため、また説明を二度行う負担を減らすため欠席・遅刻は原則禁止。やむを得ず休む場合は「弘田隼大（ひろはや）」へ連絡する。" },
+        { id: "dec-104", title: "欠席・遅刻の原則禁止と連絡先（11/11幹部代）", content: "人数が少なく投票の信憑性を保つため、また説明を二度行う負担を減らすため欠席・遅刻は原則禁止。やむを得ず休む場合は「弘田 隼大」へ連絡する。" },
         { id: "dec-105", title: "会議中のタバコ休憩禁止（11/11幹部代）", content: "会議中のタバコ休憩は全面禁止（事前に済ませてくること）。" },
         { id: "dec-106", title: "決定事項の不遡及と発言の徹底（11/11幹部代）", content: "一度決まったことは後から覆らないため、意見が固まっていなくても不満や疑問はその場で必ず「ちょっと待って」と発言する。" },
         { id: "dec-107", title: "投票ルール・ダブルスコア制（11/11幹部代）", content: "2択の投票で多数派が少数派の2倍以上（ダブルスコア）になった場合は協議なしで即決定。つかなければ1度だけ再協議を行い、2回目の投票で即決定（これも覆らない）。議論が停滞した際は一旦アンケートをとって整理する。" },
@@ -96,10 +198,10 @@ const INITIAL_STATE = {
       category: "■ 定例投票・12月定例ライブの運営ルール",
       items: [
         { id: "dec-301", title: "定例投票の同数時ルール（10/21幹文連）", content: "定例投票において1位や14位などの得票数が同数だった場合、投票権を持つ幹部代による「決選投票（自票なし）」を行う。合宿3日目の夜に開票作業を行うため、決選投票は「3日目の夜〜撤収日の昼」の間に実施して決定する。" },
-        { id: "dec-302", title: "12月定例・サポート出演料免除（11/11幹部代）", content: "例年通り「1曲のみ出演のサポートメンバーは出演費免除」とする（小林秀星が把握用フォームを作成）。" },
+        { id: "dec-302", title: "12月定例・サポート出演料免除（11/11幹部代）", content: "例年通り「1曲のみ出演のサポートメンバーは出演費免除」とする（小林 秀星が把握用フォームを作成）。" },
         { id: "dec-303", title: "12月定例・出演キャンセル時の対応（11/11幹部代）", content: "タイムテーブルを巻いて進行するのではなく、「15位以下の代わりのバンドを繰り上げて出す」ことに決定（1回目11対6 → 再協議後の2回目投票で14票のダブルスコアで決定）。" },
         { id: "dec-304", title: "出演キャンセル時の返金・料金規定（10/5・10/14・11/11議事録）", content: "10/14会議で「全体会議の投票で決める」と決定し、11/11幹部代会議で投票を行った結果、回収額決定後のキャンセル料は「一旦全額を徴収し、返金（キャッシュバック）するかは事後の会議で状況を見て判断する」方針に決定（細かい足切り基準は2月ライブ時等に再議論）。" },
-        { id: "dec-305", title: "12月定例・チケット代（ドリチケ）回収シフト（11/11幹部代）", content: "当日の受付シフトは庶務の「ほのか」（および大樹・幹文連）が12月定例の1週間前までに作成する。" }
+        { id: "dec-305", title: "12月定例・チケット代（ドリチケ）回収シフト（11/11幹部代）", content: "当日の受付シフトは庶務の「溝上 萌乃佳」（および浦山 大樹・幹文連）が12月定例の1週間前までに作成する。" }
       ]
     },
     {
@@ -116,7 +218,7 @@ const INITIAL_STATE = {
       id: "cat-5",
       category: "■ 機材・備品の購入と修理・管理ルール（11/11幹部代）",
       items: [
-        { id: "dec-501", title: "購入決定品（予算残高：計約230万〜240万円規模で余裕あり）", content: "①大蛇用収納箱、②照明・PAコード類区別用の箱、③カメラ隊のカメラケース、④ベース返し（EV）、⑤2スタ・マーシャル1台目の修理部品（渡会が修理）、⑥共用ピックホルダー（3個）、⑦予備キャノンケーブル（長さ別5本ずつ程度）、⑧ドラム台用六角レンチセット、⑨照明設営用の透明な安全ピン。" },
+        { id: "dec-501", title: "購入決定品（予算残高：計約230万〜240万円規模で余裕あり）", content: "①大蛇用収納箱、②照明・PAコード類区別用の箱、③カメラ隊のカメラケース、④ベース返し（EV）、⑤2スタ・マーシャル1台目の修理部品（渡会 啓人が修理）、⑥共用ピックホルダー（3個）、⑦予備キャノンケーブル（長さ別5本ずつ程度）、⑧ドラム台用六角レンチセット、⑨照明設営用の透明な安全ピン。" },
         { id: "dec-502", title: "修理・確認決定", content: "上手の横当ては修理へ。2スタ・マーシャル2台目は先輩（こたさん）に確認後修理へ。バラバラの3台目マーシャルは先輩（けいたさん）に連絡して確認。" },
         { id: "dec-503", title: "様子見・保留決定", content: "マークベースは12月定例まで様子見。ハイハット割れは現状維持（ドラムグルで注意喚起）。同期用オーディオインターフェース共有購入案は一旦保留（高額機材申請時に再検討）。" },
         { id: "dec-504", title: "管理ルールの新設", content: "OB企画等での使用希望を受け「ボーカルエフェクターの使用スケジュール表」を作成する。各パトリはパート内で必要機材の要望アンケートフォームを実施する。" }
@@ -126,14 +228,14 @@ const INITIAL_STATE = {
       id: "cat-6",
       category: "■ 学祭・生花手配・新歓SNS広報・学祭反省を受けた改善策",
       items: [
-        { id: "dec-601", title: "生花（なまばな）の手配と保管（10/5・10/14幹文連）", content: "割り勘なし・すべて部費（予算3万円前後）で幹文連向けに手配（余ったら機材統括へ）。配達・保管場所は「安部建人の家」。" },
-        { id: "dec-602", title: "新歓・SNS広報用の動画撮影と編集体制（10/14・11/11議事録）", content: "学祭の全エリアやパート別講習会の様子を「5秒程度（一瞬）の短い動画素材」として撮影・蓄積。編集は小林秀星・かんえつに加え、程よく仕事がない人からあと2〜3名を追加募集する（亀谷は冗談のため不採用）。" },
-        { id: "dec-603", title: "学祭の反省を受けた改善策（11/11幹部代）", content: "①グリーンシートを敷く位置は部長の「安部建人」が管理・指揮、②舞台・照明間でステージ中心位置を統一しマニュアル化、③異常に強く光る照明個体を特定して端に配置・番号管理（照明設営：れん管轄）、④電流不足対策としてパワーディストリビューター等から電源確保（機材統括：大樹管轄）、⑤ステージ上のケーブル整理徹底（PA設営管轄）、⑥大樹がPAシートを修正（DI・同期位置欄を追加）しシート通りの動きと「不要なコーラスマイク禁止」を徹底、⑦電ドラ受け渡し時の確認徹底、⑧幹部代（特にセクションリーダー）の現場遅刻厳禁。" }
+        { id: "dec-601", title: "生花（なまばな）の手配と保管（10/5・10/14幹文連）", content: "割り勘なし・すべて部費（予算3万円前後）で幹文連向けに手配（余ったら機材統括へ）。配達・保管場所は「安部 建人の家」。" },
+        { id: "dec-602", title: "新歓・SNS広報用の動画撮影と編集体制（10/14・11/11議事録）", content: "学祭の全エリアやパート別講習会の様子を「5秒程度（一瞬）の短い動画素材」として撮影・蓄積。編集は小林 秀星・朱 函悦に加え、程よく仕事がない人からあと2〜3名を追加募集する（亀谷 博昭は冗談のため不採用）。" },
+        { id: "dec-603", title: "学祭の反省を受けた改善策（11/11幹部代）", content: "①グリーンシートを敷く位置は部長の「安部 建人」が管理・指揮、②舞台・照明間でステージ中心位置を統一しマニュアル化、③異常に強く光る照明個体を特定して端に配置・番号管理（照明設営：大場 怜管轄）、④電流不足対策としてパワーディストリビューター等から電源確保（機材統括：浦山 大樹管轄）、⑤ステージ上のケーブル整理徹底（PA設営管轄）、⑥浦山 大樹がPAシートを修正（DI・同期位置欄を追加）しシート通りの動きと「不要なコーラスマイク禁止」を徹底、⑦電ドラ受け渡し時の確認徹底、⑧幹部代（特にセクションリーダー）の現場遅刻厳禁。" }
       ]
     }
   ],
   logs: [
-    { id: "log-init", user: "システム", action: "2026年10月〜11月11日会議の決定事項・ToDoリストを初期構築しました", time: "2026/11/11" }
+    { id: "log-init", user: "システム", action: "2回生（20名）・1回生（21名）の公式名簿に基づき、サイト内のすべての氏名を正式名称に修正しました", time: "2026/11/13" }
   ]
 };
 
@@ -150,13 +252,13 @@ export default function App() {
   const [boardState, setBoardState] = useState(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) return normalizeStateNames(JSON.parse(saved));
     } catch (e) {}
     return INITIAL_STATE;
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
-    return localStorage.getItem(USER_NAME_KEY) || "小林 秀星";
+    return normalizeText(localStorage.getItem(USER_NAME_KEY)) || "小林 秀星";
   });
   const [showUserModal, setShowUserModal] = useState(false);
   const [customUserName, setCustomUserName] = useState("");
@@ -191,14 +293,15 @@ export default function App() {
       docRef,
       (snap) => {
         if (snap.exists()) {
-          const data = snap.data();
-          if (data && Array.isArray(data.tasks) && Array.isArray(data.decisions)) {
+          const rawData = snap.data();
+          if (rawData && Array.isArray(rawData.tasks) && Array.isArray(rawData.decisions)) {
+            const normalized = normalizeStateNames(rawData);
             setBoardState({
-              tasks: data.tasks,
-              decisions: data.decisions,
-              logs: Array.isArray(data.logs) ? data.logs : []
+              tasks: normalized.tasks,
+              decisions: normalized.decisions,
+              logs: Array.isArray(rawData.logs) ? rawData.logs : []
             });
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalized));
           }
         } else {
           setDoc(docRef, INITIAL_STATE).catch(() => {});
@@ -214,6 +317,7 @@ export default function App() {
   }, []);
 
   const commitState = async (nextState, logMessage) => {
+    const normalized = normalizeStateNames(nextState);
     const newLog = {
       id: "log-" + Date.now(),
       user: currentUser,
@@ -221,8 +325,8 @@ export default function App() {
       time: formatNow()
     };
     const updated = {
-      ...nextState,
-      logs: [newLog, ...(nextState.logs || [])].slice(0, 60)
+      ...normalized,
+      logs: [newLog, ...(normalized.logs || [])].slice(0, 60)
     };
     setBoardState(updated);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
@@ -651,7 +755,7 @@ export default function App() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="キーワードで検索（例：マーシャル、2月ライブ、ほのか...）"
+                placeholder="キーワードで検索（例：マーシャル、2月ライブ、溝上 萌乃佳...）"
                 className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -662,15 +766,10 @@ export default function App() {
             >
               <option value="ALL">👤 担当者：すべて表示</option>
               <option value="全員">幹部代全員</option>
-              <option value="小林">小林 秀星</option>
-              <option value="安部">安部 建人</option>
-              <option value="渡会">渡会 侑希</option>
-              <option value="ほのか">ほのか</option>
-              <option value="たいき">大樹（たいき）</option>
-              <option value="杉原">杉原 和貴</option>
-              <option value="れん">蓮（れん）</option>
-              <option value="亀谷">亀谷</option>
-              <option value="パトリ">各パトリ</option>
+              {MEMBERS_2KAISE.map((name) => (
+                <option key={name} value={name.split(" ")[0]}>{name}</option>
+              ))}
+              <option value="パトリ">各パートリーダー（パトリ）</option>
             </select>
             {(searchQuery || filterWho !== "ALL") && (
               <button
@@ -713,11 +812,21 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <input
                   type="text"
+                  list="roster-datalist"
                   value={newTaskWho}
                   onChange={(e) => setNewTaskWho(e.target.value)}
-                  placeholder="誰が（例：小林 秀星 / 全員）"
+                  placeholder="誰が（選択または自由入力）"
                   className="sm:col-span-3 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
                 />
+                <datalist id="roster-datalist">
+                  <option value="幹部代全員" />
+                  {MEMBERS_2KAISE.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                  {MEMBERS_1KAISE.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
                 <input
                   type="text"
                   value={newTaskWhen}
@@ -774,6 +883,7 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <input
                             type="text"
+                            list="roster-datalist"
                             value={editTaskForm.who}
                             onChange={(e) => setEditTaskForm({ ...editTaskForm, who: e.target.value })}
                             className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-bold bg-white"
@@ -912,6 +1022,7 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <input
                             type="text"
+                            list="roster-datalist"
                             value={editTaskForm.who}
                             onChange={(e) => setEditTaskForm({ ...editTaskForm, who: e.target.value })}
                             className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-bold"
@@ -1241,8 +1352,8 @@ export default function App() {
               </div>
               <button
                 onClick={() => {
-                  if (window.confirm("すべてのデータを初期状態にリセットしますか？")) {
-                    commitState(INITIAL_STATE, "データを初期状態にリセットしました");
+                  if (window.confirm("すべてのデータを初期状態（公式名簿氏名版）にリセットしますか？")) {
+                    commitState(INITIAL_STATE, "データを初期状態（公式名簿氏名版）にリセットしました");
                   }
                 }}
                 className="text-[11px] text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg border border-red-200 flex items-center gap-1 font-bold"
@@ -1298,7 +1409,7 @@ export default function App() {
 
       {showUserModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-base text-slate-900">👤 自分の名前（編集者名）を選択</h3>
               <button
@@ -1309,27 +1420,55 @@ export default function App() {
               </button>
             </div>
             <p className="text-xs text-slate-500">
-              選択した名前で「誰がチェック・編集したか」が全員の画面に記録されます。
+              公式名簿（2回生20名・1回生21名）から選択できます。選んだ名前で編集履歴が記録されます。
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
-              {KANBU_MEMBERS.map((name) => (
-                <button
-                  key={name}
-                  onClick={() => {
-                    setCurrentUser(name);
-                    localStorage.setItem(USER_NAME_KEY, name);
-                    setShowUserModal(false);
-                  }}
-                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border text-left truncate flex items-center justify-between ${
-                    currentUser === name
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50"
-                  }`}
-                >
-                  <span className="truncate">{name}</span>
-                  {currentUser === name && <Check size={13} className="shrink-0" />}
-                </button>
-              ))}
+            <div className="overflow-y-auto space-y-3 pr-1">
+              <div>
+                <div className="text-xs font-bold text-indigo-800 mb-1.5">■ 2回生（同期・20名）</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {MEMBERS_2KAISE.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        setCurrentUser(name);
+                        localStorage.setItem(USER_NAME_KEY, name);
+                        setShowUserModal(false);
+                      }}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-bold border text-left truncate flex items-center justify-between ${
+                        currentUser === name
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50"
+                      }`}
+                    >
+                      <span className="truncate">{name}</span>
+                      {currentUser === name && <Check size={13} className="shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-emerald-800 mb-1.5">■ 1回生（後輩・21名）</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {MEMBERS_1KAISE.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        setCurrentUser(name);
+                        localStorage.setItem(USER_NAME_KEY, name);
+                        setShowUserModal(false);
+                      }}
+                      className={`py-1.5 px-2.5 rounded-xl text-xs font-bold border text-left truncate flex items-center justify-between ${
+                        currentUser === name
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50"
+                      }`}
+                    >
+                      <span className="truncate">{name}</span>
+                      {currentUser === name && <Check size={13} className="shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="pt-2 border-t border-slate-100 flex gap-2">
               <input
