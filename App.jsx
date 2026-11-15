@@ -10,10 +10,11 @@ import {
 } from "firebase/firestore";
 import {
   CheckCircle2, Circle, Plus, Edit2, Trash2, ArrowUp, ArrowDown,
-  History, Users, FileText, CheckSquare, Sparkles, Search,
+  History, Users, FileText, CheckSquare, Search,
   Download, RotateCcw, FolderPlus, X, Check,
   Calendar, LogOut, User, StickyNote, RefreshCw, AlertCircle,
-  ChevronLeft, ChevronRight, Shield, Star, ArrowUpDown
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Shield, Star,
+  SlidersHorizontal
 } from 'lucide-react';
 
 // --- Firebase Configuration (即時同期最適化) ---
@@ -43,7 +44,7 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v5";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v6";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
@@ -52,10 +53,10 @@ const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
 const IMPORTANCE_OPTIONS = [
   { value: 0, label: "なし", short: "なし", badgeClass: "bg-slate-100 text-slate-500 border-slate-200", activeBtnClass: "bg-slate-700 text-white border-slate-700" },
   { value: 1, label: "★1 (低)", short: "★1", badgeClass: "bg-slate-100 text-slate-700 border-slate-300", activeBtnClass: "bg-slate-600 text-white border-slate-600" },
-  { value: 2, label: "★2 (やや低)", short: "★2", badgeClass: "bg-sky-50 text-sky-800 border-sky-200", activeBtnClass: "bg-sky-600 text-white border-sky-600" },
+  { value: 2, label: "★2", short: "★2", badgeClass: "bg-sky-50 text-sky-800 border-sky-200", activeBtnClass: "bg-sky-600 text-white border-sky-600" },
   { value: 3, label: "★3 (中)", short: "★3", badgeClass: "bg-amber-50 text-amber-800 border-amber-300", activeBtnClass: "bg-amber-500 text-white border-amber-500" },
   { value: 4, label: "★4 (高)", short: "★4", badgeClass: "bg-orange-100 text-orange-900 border-orange-300", activeBtnClass: "bg-orange-600 text-white border-orange-600" },
-  { value: 5, label: "★5 (最優先)", short: "★5", badgeClass: "bg-rose-100 text-rose-800 border-rose-300 ring-1 ring-rose-200", activeBtnClass: "bg-rose-600 text-white border-rose-600" }
+  { value: 5, label: "★5 (最優先)", short: "★5", badgeClass: "bg-rose-100 text-rose-800 border-rose-300", activeBtnClass: "bg-rose-600 text-white border-rose-600" }
 ];
 
 const getImportanceMeta = (val) => {
@@ -65,7 +66,7 @@ const getImportanceMeta = (val) => {
 
 // --- 並び替えモードのラベル定義 ---
 const SORT_MODE_LABELS = {
-  manual: "手動順（↑↓）",
+  manual: "手動順（↑↓ボタンで移動）",
   added_asc: "追加順（昇順：古い→新しい）",
   added_desc: "追加順（降順：新しい→古い）",
   imp_desc: "重要度が高い順（★5→★1→なし）",
@@ -75,173 +76,34 @@ const SORT_MODE_LABELS = {
 
 // --- 写真の役職表に基づく幹部代メンバー20名と担当役職データ ---
 const KANBU_ROSTER = [
-  {
-    name: "安部建人",
-    aliases: ["安部", "あべ", "部長", "監督"],
-    roles: ["部長", "監督", "PA（設営）", "PA（卓）"],
-    leadRoles: ["部長", "監督"],
-    groups: ["幹部", "ライブ各責任者", "PA"]
-  },
-  {
-    name: "小林秀星",
-    aliases: ["小林", "しゅうせい", "こばしゅう", "副部長"],
-    roles: ["副部長", "PA（卓）", "差し入れ"],
-    leadRoles: ["副部長", "PA（卓）"],
-    groups: ["幹部", "ライブ各責任者", "PA"]
-  },
-  {
-    name: "平野春音",
-    aliases: ["平野", "はるね", "会計"],
-    roles: ["会計", "照明（設営）", "カメラ"],
-    leadRoles: ["会計"],
-    groups: ["幹部", "ライブ各責任者", "照明"]
-  },
-  {
-    name: "杉原和貴",
-    aliases: ["杉原", "かずき", "渉外"],
-    roles: ["渉外", "PA（設営）"],
-    leadRoles: ["渉外", "PA（設営）"],
-    groups: ["幹部", "ライブ各責任者", "PA"]
-  },
-  {
-    name: "弘田隼大",
-    aliases: ["弘田", "ひろはや", "総務"],
-    roles: ["総務", "楽器庫"],
-    leadRoles: ["総務", "楽器庫"],
-    groups: ["幹部", "ライブ各責任者"]
-  },
-  {
-    name: "溝上萌乃佳",
-    aliases: ["溝上", "ほのか", "萌乃佳"],
-    roles: ["ボーカル（パトリ）", "庶務", "電ドラ"],
-    leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"],
-    groups: ["パートリーダー", "パトリ", "ライブ各責任者"]
-  },
-  {
-    name: "渡会啓人",
-    aliases: ["渡会", "わたらい"],
-    roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"],
-    leadRoles: ["ギター（パトリ）", "ビデオカメラ"],
-    groups: ["パートリーダー", "パトリ", "ライブ各責任者"]
-  },
-  {
-    name: "浦山大樹",
-    aliases: ["浦山", "大樹", "たいき"],
-    roles: ["ベース（パトリ）", "PA（設営）", "機材統括"],
-    leadRoles: ["ベース（パトリ）", "機材統括"],
-    groups: ["パートリーダー", "パトリ", "ライブ各責任者", "PA"]
-  },
-  {
-    name: "滑川優斗",
-    aliases: ["滑川", "なめこ"],
-    roles: ["ドラム（パトリ）", "格納庫", "機材車"],
-    leadRoles: ["ドラム（パトリ）", "格納庫"],
-    groups: ["パートリーダー", "パトリ", "ライブ各責任者", "その他"]
-  },
-  {
-    name: "森柊実",
-    aliases: ["森", "しゅうま", "柊実"],
-    roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"],
-    leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"],
-    groups: ["パートリーダー", "パトリ", "ライブ各責任者", "照明"]
-  },
-  {
-    name: "春日京介",
-    aliases: ["春日", "かすが"],
-    roles: ["文連", "舞台", "機材車"],
-    leadRoles: ["文連"],
-    groups: ["ライブ各責任者", "幹文連", "その他"]
-  },
-  {
-    name: "大橋菜純",
-    aliases: ["大橋", "なすみ", "菜純"],
-    roles: ["文連"],
-    leadRoles: ["文連"],
-    groups: ["ライブ各責任者", "幹文連"]
-  },
-  {
-    name: "小川美晴",
-    aliases: ["小川", "みはる", "美晴"],
-    roles: ["チェックマン", "ビデオカメラ", "卒パ"],
-    leadRoles: ["チェックマン", "卒パ"],
-    groups: ["ライブ各責任者", "その他"]
-  },
-  {
-    name: "亀谷博昭",
-    aliases: ["亀谷", "かめや"],
-    roles: ["舞台", "カメラ", "差し入れ", "機材車"],
-    leadRoles: ["舞台"],
-    groups: ["ライブ各責任者", "その他"]
-  },
-  {
-    name: "松尾知律",
-    aliases: ["松尾", "ちりつ", "知律"],
-    roles: ["舞台"],
-    leadRoles: [],
-    groups: ["ライブ各責任者"]
-  },
-  {
-    name: "清水康貴",
-    aliases: ["清水", "やす", "康貴"],
-    roles: ["楽器庫"],
-    leadRoles: [],
-    groups: ["ライブ各責任者"]
-  },
-  {
-    name: "大場怜",
-    aliases: ["大場", "れん", "蓮", "怜"],
-    roles: ["照明（設営）", "BBQ"],
-    leadRoles: ["照明（設営）", "BBQ"],
-    groups: ["ライブ各責任者", "照明", "その他"]
-  },
-  {
-    name: "小島大幹",
-    aliases: ["小島", "こじだい", "大幹"],
-    roles: ["照明（設営）", "カメラ", "卒パ"],
-    leadRoles: ["カメラ"],
-    groups: ["ライブ各責任者", "照明", "その他"]
-  },
-  {
-    name: "朱函悦",
-    aliases: ["朱", "かんえつ", "函悦"],
-    roles: ["照明（操作）", "web,SNS", "機材車"],
-    leadRoles: ["web,SNS", "機材車"],
-    groups: ["ライブ各責任者", "照明", "その他"]
-  },
-  {
-    name: "武捨裕吏",
-    aliases: ["武捨", "ゆうり", "裕吏"],
-    roles: ["電ドラ"],
-    leadRoles: [],
-    groups: ["ライブ各責任者"]
-  }
+  { name: "安部建人", aliases: ["安部", "あべ", "部長", "監督"], roles: ["部長", "監督", "PA（設営）", "PA（卓）"], leadRoles: ["部長", "監督"], groups: ["幹部", "ライブ各責任者", "PA"] },
+  { name: "小林秀星", aliases: ["小林", "しゅうせい", "こばしゅう", "副部長"], roles: ["副部長", "PA（卓）", "差し入れ"], leadRoles: ["副部長", "PA（卓）"], groups: ["幹部", "ライブ各責任者", "PA"] },
+  { name: "平野春音", aliases: ["平野", "はるね", "会計"], roles: ["会計", "照明（設営）", "カメラ"], leadRoles: ["会計"], groups: ["幹部", "ライブ各責任者", "照明"] },
+  { name: "杉原和貴", aliases: ["杉原", "かずき", "渉外"], roles: ["渉外", "PA（設営）"], leadRoles: ["渉外", "PA（設営）"], groups: ["幹部", "ライブ各責任者", "PA"] },
+  { name: "弘田隼大", aliases: ["弘田", "ひろはや", "総務"], roles: ["総務", "楽器庫"], leadRoles: ["総務", "楽器庫"], groups: ["幹部", "ライブ各責任者"] },
+  { name: "溝上萌乃佳", aliases: ["溝上", "ほのか", "萌乃佳"], roles: ["ボーカル（パトリ）", "庶務", "電ドラ"], leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者"] },
+  { name: "渡会啓人", aliases: ["渡会", "わたらい"], roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"], leadRoles: ["ギター（パトリ）", "ビデオカメラ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者"] },
+  { name: "浦山大樹", aliases: ["浦山", "大樹", "たいき"], roles: ["ベース（パトリ）", "PA（設営）", "機材統括"], leadRoles: ["ベース（パトリ）", "機材統括"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "PA"] },
+  { name: "滑川優斗", aliases: ["滑川", "なめこ"], roles: ["ドラム（パトリ）", "格納庫", "機材車"], leadRoles: ["ドラム（パトリ）", "格納庫"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "その他"] },
+  { name: "森柊実", aliases: ["森", "しゅうま", "柊実"], roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "照明"] },
+  { name: "春日京介", aliases: ["春日", "かすが"], roles: ["文連", "舞台", "機材車"], leadRoles: ["文連"], groups: ["ライブ各責任者", "幹文連", "その他"] },
+  { name: "大橋菜純", aliases: ["大橋", "なすみ", "菜純"], roles: ["文連"], leadRoles: ["文連"], groups: ["ライブ各責任者", "幹文連"] },
+  { name: "小川美晴", aliases: ["小川", "みはる", "美晴"], roles: ["チェックマン", "ビデオカメラ", "卒パ"], leadRoles: ["チェックマン", "卒パ"], groups: ["ライブ各責任者", "その他"] },
+  { name: "亀谷博昭", aliases: ["亀谷", "かめや"], roles: ["舞台", "カメラ", "差し入れ", "機材車"], leadRoles: ["舞台"], groups: ["ライブ各責任者", "その他"] },
+  { name: "松尾知律", aliases: ["松尾", "ちりつ", "知律"], roles: ["舞台"], leadRoles: [], groups: ["ライブ各責任者"] },
+  { name: "清水康貴", aliases: ["清水", "やす", "康貴"], roles: ["楽器庫"], leadRoles: [], groups: ["ライブ各責任者"] },
+  { name: "大場怜", aliases: ["大場", "れん", "蓮", "怜"], roles: ["照明（設営）", "BBQ"], leadRoles: ["照明（設営）", "BBQ"], groups: ["ライブ各責任者", "照明", "その他"] },
+  { name: "小島大幹", aliases: ["小島", "こじだい", "大幹"], roles: ["照明（設営）", "カメラ", "卒パ"], leadRoles: ["カメラ"], groups: ["ライブ各責任者", "照明", "その他"] },
+  { name: "朱函悦", aliases: ["朱", "かんえつ", "函悦"], roles: ["照明（操作）", "web,SNS", "機材車"], leadRoles: ["web,SNS", "機材車"], groups: ["ライブ各責任者", "照明", "その他"] },
+  { name: "武捨裕吏", aliases: ["武捨", "ゆうり", "裕吏"], roles: ["電ドラ"], leadRoles: [], groups: ["ライブ各責任者"] }
 ];
 
 const ROLE_CATEGORIES = [
-  {
-    group: "全体・グループ",
-    roles: ["幹部代全員", "幹部", "幹文連", "パートリーダー（パトリ）", "各セクションリーダー"]
-  },
-  {
-    group: "幹部",
-    roles: ["部長", "副部長", "会計", "渉外", "総務"]
-  },
-  {
-    group: "パートリーダー",
-    roles: ["ボーカル（パトリ）", "ギター（パトリ）", "ベース（パトリ）", "ドラム（パトリ）", "キーボード（パトリ）"]
-  },
-  {
-    group: "ライブ 各責任者",
-    roles: [
-      "監督", "文連", "チェックマン", "舞台", "楽器庫", "格納庫",
-      "照明（設営）", "照明（操作）", "PA（設営）", "PA（卓）",
-      "庶務", "電ドラ", "カメラ", "ビデオカメラ", "差し入れ", "機材統括"
-    ]
-  },
-  {
-    group: "その他",
-    roles: ["web,SNS", "BBQ", "機材車", "卒パ"]
-  }
+  { group: "全体・グループ", roles: ["幹部代全員", "幹部", "幹文連", "パートリーダー（パトリ）", "各セクションリーダー"] },
+  { group: "幹部", roles: ["部長", "副部長", "会計", "渉外", "総務"] },
+  { group: "パートリーダー", roles: ["ボーカル（パトリ）", "ギター（パトリ）", "ベース（パトリ）", "ドラム（パトリ）", "キーボード（パトリ）"] },
+  { group: "ライブ 各責任者", roles: ["監督", "文連", "チェックマン", "舞台", "楽器庫", "格納庫", "照明（設営）", "照明（操作）", "PA（設営）", "PA（卓）", "庶務", "電ドラ", "カメラ", "ビデオカメラ", "差し入れ", "機材統括"] },
+  { group: "その他", roles: ["web,SNS", "BBQ", "機材車", "卒パ"] }
 ];
 
 const FULL_ROLE_TABLE = [
@@ -385,8 +247,7 @@ const formatNow = () => {
   const day = String(d.getDate()).padStart(2, '0');
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${m}/${day} ${hh}:${mm}:${ss}`;
+  return `${m}/${day} ${hh}:${mm}`;
 };
 
 const formatDateLabel = (yyyyMmDd) => {
@@ -425,34 +286,21 @@ const isTaskForMember = (taskWho, memberObj) => {
 const buildWhoString = (selectedNames, selectedRoles, freeText) => {
   const parts = [...selectedNames, ...selectedRoles];
   const cleanFree = (freeText || "").trim();
-  if (parts.length > 0 && cleanFree) {
-    return `${parts.join("・")}（${cleanFree}）`;
-  }
-  if (parts.length > 0) {
-    return parts.join("・");
-  }
-  if (cleanFree) {
-    return cleanFree;
-  }
+  if (parts.length > 0 && cleanFree) return `${parts.join("・")}（${cleanFree}）`;
+  if (parts.length > 0) return parts.join("・");
+  if (cleanFree) return cleanFree;
   return "未定（全体）";
 };
 
 const buildWhenString = (selectedDates, freeText) => {
   const formattedDates = selectedDates.map(formatDateLabel);
   const cleanFree = (freeText || "").trim();
-  if (formattedDates.length > 0 && cleanFree) {
-    return `${formattedDates.join("・")} ${cleanFree}`;
-  }
-  if (formattedDates.length > 0) {
-    return formattedDates.join("・");
-  }
-  if (cleanFree) {
-    return cleanFree;
-  }
+  if (formattedDates.length > 0 && cleanFree) return `${formattedDates.join("・")} ${cleanFree}`;
+  if (formattedDates.length > 0) return formattedDates.join("・");
+  if (cleanFree) return cleanFree;
   return "順次";
 };
 
-// 各項目の「追加された順番（タイムスタンプまたは初期番号）」を取得するヘルパー
 const getAddedOrderValue = (item) => {
   if (typeof item?.createdAt === "number" && !Number.isNaN(item.createdAt)) {
     return item.createdAt;
@@ -465,19 +313,14 @@ const getAddedOrderValue = (item) => {
     if (prefix === "todo") return 1000 + num;
     if (prefix === "done") return 2000 + num;
     if (prefix === "dec" && num < 100000) return 3000 + num;
-    return num; // Date.now() による13桁タイムスタンプ
+    return num;
   }
   return 0;
 };
 
-// 共通の並び替え比較関数（追加順［昇順・降順］・重要度順・担当者順）
 const compareItems = (a, b, mode) => {
-  if (mode === "added_asc") {
-    return getAddedOrderValue(a) - getAddedOrderValue(b);
-  }
-  if (mode === "added_desc") {
-    return getAddedOrderValue(b) - getAddedOrderValue(a);
-  }
+  if (mode === "added_asc") return getAddedOrderValue(a) - getAddedOrderValue(b);
+  if (mode === "added_desc") return getAddedOrderValue(b) - getAddedOrderValue(a);
   const impA = Number(a.importance) || 0;
   const impB = Number(b.importance) || 0;
   if (mode === "imp_desc") {
@@ -496,12 +339,12 @@ const compareItems = (a, b, mode) => {
   return 0;
 };
 
-// --- 重要度（なし / 1〜5）セレクターコンポーネント ---
+// --- 重要度セレクター ---
 function ImportanceSelector({ value, onChange, label = "重要度（1〜5 / なし）" }) {
   const currentVal = Number(value) || 0;
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+      <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
         <Star size={14} className="text-amber-500" />
         <span>{label}</span>
       </label>
@@ -513,10 +356,10 @@ function ImportanceSelector({ value, onChange, label = "重要度（1〜5 / な�
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1 ${
                 active
-                  ? opt.activeBtnClass + " shadow-xs scale-[1.02]"
-                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                  ? opt.activeBtnClass + " shadow-xs"
+                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
               }`}
             >
               <span>{opt.label}</span>
@@ -529,17 +372,13 @@ function ImportanceSelector({ value, onChange, label = "重要度（1〜5 / な�
   );
 }
 
-// --- 重要度バッジ表示コンポーネント ---
 function ImportanceBadge({ importance }) {
   const num = Number(importance) || 0;
   if (num <= 0) return null;
   const meta = getImportanceMeta(num);
   return (
-    <span
-      className={`font-bold text-[11px] px-2 py-0.5 rounded-lg border inline-flex items-center gap-0.5 ${meta.badgeClass}`}
-      title={`重要度: ${meta.label}`}
-    >
-      <span>重要度 {meta.short}</span>
+    <span className={`font-bold text-xs px-2.5 py-0.5 rounded-lg border inline-flex items-center ${meta.badgeClass}`}>
+      {meta.short}
     </span>
   );
 }
@@ -572,9 +411,7 @@ function CalendarSelector({ selectedDates, onToggleDate, onClearDates }) {
   };
 
   const cells = [];
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    cells.push(null);
-  }
+  for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) {
     const mm = String(viewMonth + 1).padStart(2, "0");
     const dd = String(d).padStart(2, "0");
@@ -582,46 +419,34 @@ function CalendarSelector({ selectedDates, onToggleDate, onClearDates }) {
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <button
-          type="button"
-          onClick={prevMonth}
-          className="p-1 hover:bg-slate-100 rounded-lg text-slate-600"
-        >
+        <button type="button" onClick={prevMonth} className="p-1.5 hover:bg-white rounded-lg text-slate-600">
           <ChevronLeft size={16} />
         </button>
         <span className="text-xs font-bold text-slate-800">
           {viewYear}年 {viewMonth + 1}月
         </span>
-        <button
-          type="button"
-          onClick={nextMonth}
-          className="p-1 hover:bg-slate-100 rounded-lg text-slate-600"
-        >
+        <button type="button" onClick={nextMonth} className="p-1.5 hover:bg-white rounded-lg text-slate-600">
           <ChevronRight size={16} />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1">
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 mb-1">
         {WEEKDAYS.map((w, i) => (
-          <div key={w} className={i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : ""}>
-            {w}
-          </div>
+          <div key={w} className={i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : ""}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {cells.map((cell, idx) => {
-          if (!cell) return <div key={`empty-${idx}`} className="h-7" />;
+          if (!cell) return <div key={`empty-${idx}`} className="h-8" />;
           const isSelected = selectedDates.includes(cell.iso);
           return (
             <button
               key={cell.iso}
               type="button"
               onClick={() => onToggleDate(cell.iso)}
-              className={`h-7 rounded-lg text-xs font-bold transition flex items-center justify-center ${
-                isSelected
-                  ? "bg-indigo-600 text-white shadow-xs"
-                  : "hover:bg-indigo-50 text-slate-700"
+              className={`h-8 rounded-lg text-xs font-bold transition flex items-center justify-center ${
+                isSelected ? "bg-indigo-600 text-white shadow-xs" : "bg-white hover:bg-indigo-50 text-slate-700"
               }`}
             >
               {cell.day}
@@ -630,23 +455,16 @@ function CalendarSelector({ selectedDates, onToggleDate, onClearDates }) {
         })}
       </div>
       {selectedDates.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+        <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between">
           <div className="flex flex-wrap gap-1">
             {selectedDates.map((d) => (
-              <span
-                key={d}
-                className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md text-[11px] font-bold"
-              >
+              <span key={d} className="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md text-xs font-bold">
                 {formatDateLabel(d)}
               </span>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={onClearDates}
-            className="text-[11px] text-red-500 hover:underline font-bold shrink-0 ml-2"
-          >
-            選択解除
+          <button type="button" onClick={onClearDates} className="text-xs text-red-600 font-bold ml-2">
+            クリア
           </button>
         </div>
       )}
@@ -654,24 +472,14 @@ function CalendarSelector({ selectedDates, onToggleDate, onClearDates }) {
   );
 }
 
-// --- 「誰が」名前・役職複数選択＋自由記述ピッカー ---
-function WhoSelector({
-  selectedNames,
-  setSelectedNames,
-  selectedRoles,
-  setSelectedRoles,
-  freeText,
-  setFreeText
-}) {
+// --- 「誰が」選択＋自由記述コンポーネント ---
+function WhoSelector({ selectedNames, setSelectedNames, selectedRoles, setSelectedRoles, freeText, setFreeText }) {
   const [openPicker, setOpenPicker] = useState(false);
   const [pickerTab, setPickerTab] = useState("names");
 
   const toggleItem = (list, setList, item) => {
-    if (list.includes(item)) {
-      setList(list.filter((x) => x !== item));
-    } else {
-      setList([...list, item]);
-    }
+    if (list.includes(item)) setList(list.filter((x) => x !== item));
+    else setList([...list, item]);
   };
 
   const previewText = buildWhoString(selectedNames, selectedRoles, freeText);
@@ -679,63 +487,57 @@ function WhoSelector({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-          <Users size={14} className="text-indigo-600" />
-          <span>誰が（名前・役職の複数選択 / 選択なし＋自由記述もOK）</span>
+        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <Users size={15} className="text-indigo-600" />
+          <span>誰が（名前・役職を選択 または 自由記述）</span>
         </label>
         <button
           type="button"
           onClick={() => setOpenPicker(!openPicker)}
-          className="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+          className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
         >
-          {openPicker ? "▲ 名前・役職の選択欄を閉じる" : "▼ 名前・役職から選択する（複数可）"}
+          {openPicker ? "▲ 選択リストを閉じる" : "▼ 名前・役職リストから選ぶ（複数可）"}
         </button>
       </div>
 
       {(selectedNames.length > 0 || selectedRoles.length > 0) && (
-        <div className="flex flex-wrap items-center gap-1.5 bg-indigo-50/60 p-2 rounded-xl border border-indigo-100">
-          <span className="text-[11px] font-bold text-indigo-800 mr-1">選択中:</span>
+        <div className="flex flex-wrap items-center gap-1.5 bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-100">
           {selectedNames.map((n) => (
             <span
               key={`n-${n}`}
               onClick={() => toggleItem(selectedNames, setSelectedNames, n)}
-              className="cursor-pointer bg-indigo-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1"
+              className="cursor-pointer bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1"
             >
-              👤 {n} <X size={11} />
+              👤 {n} <X size={12} />
             </span>
           ))}
           {selectedRoles.map((r) => (
             <span
               key={`r-${r}`}
               onClick={() => toggleItem(selectedRoles, setSelectedRoles, r)}
-              className="cursor-pointer bg-blue-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1"
+              className="cursor-pointer bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1"
             >
-              🏷️ {r} <X size={11} />
+              🏷️ {r} <X size={12} />
             </span>
           ))}
           <button
             type="button"
-            onClick={() => {
-              setSelectedNames([]);
-              setSelectedRoles([]);
-            }}
-            className="text-[11px] text-red-600 font-bold hover:underline ml-auto"
+            onClick={() => { setSelectedNames([]); setSelectedRoles([]); }}
+            className="text-xs text-red-600 font-bold hover:underline ml-auto"
           >
-            すべて解除
+            全解除
           </button>
         </div>
       )}
 
       {openPicker && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-xs space-y-2.5">
-          <div className="flex gap-1.5 border-b border-slate-100 pb-2">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
+          <div className="flex gap-2 border-b border-slate-200 pb-2">
             <button
               type="button"
               onClick={() => setPickerTab("names")}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                pickerTab === "names"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition ${
+                pickerTab === "names" ? "bg-indigo-600 text-white" : "bg-white text-slate-600 border border-slate-200"
               }`}
             >
               👤 名前から選ぶ（20名）
@@ -743,10 +545,8 @@ function WhoSelector({
             <button
               type="button"
               onClick={() => setPickerTab("roles")}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                pickerTab === "roles"
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition ${
+                pickerTab === "roles" ? "bg-blue-600 text-white" : "bg-white text-slate-600 border border-slate-200"
               }`}
             >
               🏷️ 役職から選ぶ
@@ -754,7 +554,7 @@ function WhoSelector({
           </div>
 
           {pickerTab === "names" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto p-0.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
               {KANBU_ROSTER.map((m) => {
                 const active = selectedNames.includes(m.name);
                 return (
@@ -762,16 +562,14 @@ function WhoSelector({
                     key={m.name}
                     type="button"
                     onClick={() => toggleItem(selectedNames, setSelectedNames, m.name)}
-                    className={`px-2.5 py-1.5 rounded-xl text-left text-xs font-bold border transition flex items-center justify-between ${
-                      active
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50"
+                    className={`p-2 rounded-xl text-left text-xs font-bold border transition flex items-center justify-between ${
+                      active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-700 border-slate-200"
                     }`}
                   >
                     <div className="truncate">
                       <div>{m.name}</div>
                       <div className={`text-[10px] truncate ${active ? "text-indigo-100" : "text-slate-400"}`}>
-                        {m.roles.slice(0, 2).join("・")}
+                        {m.roles[0]}
                       </div>
                     </div>
                     {active && <Check size={13} className="shrink-0" />}
@@ -780,7 +578,7 @@ function WhoSelector({
               })}
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-52 overflow-y-auto">
               {ROLE_CATEGORIES.map((cat) => (
                 <div key={cat.group}>
                   <div className="text-[11px] font-bold text-slate-500 mb-1">■ {cat.group}</div>
@@ -793,9 +591,7 @@ function WhoSelector({
                           type="button"
                           onClick={() => toggleItem(selectedRoles, setSelectedRoles, role)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1 ${
-                            active
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50"
+                            active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200"
                           }`}
                         >
                           <span>{role}</span>
@@ -811,32 +607,27 @@ function WhoSelector({
         </div>
       )}
 
-      <div>
-        <input
-          type="text"
-          value={freeText}
-          onChange={(e) => setFreeText(e.target.value)}
-          placeholder="誰が：自由記述（選択なしでここだけ入力、または選択＋補足記述もOK）"
-          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <div className="text-[11px] text-slate-500 mt-1">
-          表示プレビュー: <strong className="text-indigo-800">{previewText}</strong>
-        </div>
+      <input
+        type="text"
+        value={freeText}
+        onChange={(e) => setFreeText(e.target.value)}
+        placeholder="自由記述（選択なしでここだけ入力、または選択＋補足記述もOK）"
+        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <div className="text-xs text-slate-500">
+        表示プレビュー: <strong className="text-indigo-700">{previewText}</strong>
       </div>
     </div>
   );
 }
 
-// --- 「いつまで」カレンダー日付選択＋自由記述ピッカー ---
+// --- 「いつまで」カレンダー選択＋自由記述コンポーネント ---
 function WhenSelector({ selectedDates, setSelectedDates, freeText, setFreeText }) {
   const [openCal, setOpenCal] = useState(false);
 
   const toggleDate = (iso) => {
-    if (selectedDates.includes(iso)) {
-      setSelectedDates(selectedDates.filter((d) => d !== iso));
-    } else {
-      setSelectedDates([...selectedDates, iso].sort());
-    }
+    if (selectedDates.includes(iso)) setSelectedDates(selectedDates.filter((d) => d !== iso));
+    else setSelectedDates([...selectedDates, iso].sort());
   };
 
   const previewText = buildWhenString(selectedDates, freeText);
@@ -844,16 +635,16 @@ function WhenSelector({ selectedDates, setSelectedDates, freeText, setFreeText }
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-          <Calendar size={14} className="text-amber-600" />
-          <span>いつまでに（カレンダー日付選択 / 選択なし＋自由記述もOK）</span>
+        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <Calendar size={15} className="text-amber-600" />
+          <span>いつまでに（カレンダー選択 または 自由記述）</span>
         </label>
         <button
           type="button"
           onClick={() => setOpenCal(!openCal)}
-          className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition"
+          className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition"
         >
-          {openCal ? "▲ カレンダーを閉じる" : "📅 カレンダーから日付を選択"}
+          {openCal ? "▲ カレンダーを閉じる" : "📅 カレンダーから日付を選ぶ"}
         </button>
       </div>
 
@@ -865,17 +656,15 @@ function WhenSelector({ selectedDates, setSelectedDates, freeText, setFreeText }
         />
       )}
 
-      <div>
-        <input
-          type="text"
-          value={freeText}
-          onChange={(e) => setFreeText(e.target.value)}
-          placeholder="いつまでに：自由記述（例：次回会議まで / 19:00まで ※日付選択と併用・これだけでもOK）"
-          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <div className="text-[11px] text-slate-500 mt-1">
-          表示プレビュー: <strong className="text-amber-800">{previewText}</strong>
-        </div>
+      <input
+        type="text"
+        value={freeText}
+        onChange={(e) => setFreeText(e.target.value)}
+        placeholder="自由記述（例：次回会議まで / 19:00まで ※日付選択と併用・これだけでもOK）"
+        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <div className="text-xs text-slate-500">
+        表示プレビュー: <strong className="text-amber-800">{previewText}</strong>
       </div>
     </div>
   );
@@ -906,7 +695,7 @@ export default function App() {
         return {
           tasks: Array.isArray(parsed.tasks) ? parsed.tasks : INITIAL_STATE.tasks,
           decisions: Array.isArray(parsed.decisions) ? parsed.decisions : INITIAL_STATE.decisions,
-          memos: parsed.memos && typeof data?.memos === "object" ? parsed.memos : (parsed.memos || {}),
+          memos: parsed.memos && typeof parsed.memos === "object" ? parsed.memos : {},
           logs: Array.isArray(parsed.logs) ? parsed.logs : INITIAL_STATE.logs,
           lastModified: parsed.lastModified || 0
         };
@@ -916,19 +705,33 @@ export default function App() {
   });
 
   const [syncStatus, setSyncStatus] = useState("connecting");
-  const [activeTab, setActiveTab] = useState("mypage"); // 'mypage' | 'all' | 'tasks' | 'decisions' | 'logs'
+
+  // メインタブ（4つに整理してスッキリ化）: 'mypage' | 'tasks' | 'decisions' | 'logs'
+  const [activeTab, setActiveTab] = useState("mypage");
+  // マイページ内のサブタブ: 'todo' | 'memo'
+  const [myPageSubTab, setMyPageSubTab] = useState("todo");
+  // ToDoタブ内のサブタブ: 'todo' (未完了) | 'done' (完了済み)
+  const [taskSubTab, setTaskSubTab] = useState("todo");
+
+  // 検索・フィルターパネルの開閉
+  const [showFilterBar, setShowFilterBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterWho, setFilterWho] = useState("ALL");
   const [filterImportance, setFilterImportance] = useState("ALL");
-  const [showRoleTableModal, setShowRoleTableModal] = useState(false);
 
-  // 各リストの並び替えモード状態
-  // 'manual' | 'added_asc' | 'added_desc' | 'imp_desc' | 'imp_asc' | 'who_asc'
+  // 並び替えモード
   const [todoSortMode, setTodoSortMode] = useState("manual");
   const [doneSortMode, setDoneSortMode] = useState("manual");
   const [decisionSortMode, setDecisionSortMode] = useState("manual");
 
-  // ワンクッション確認モーダル状態
+  // 決定事項カテゴリの開閉状態（見やすさのため初期はすべて開く or 個別開閉可能）
+  const [collapsedCats, setCollapsedCats] = useState({});
+
+  // ポップアップモーダル制御（追加フォームを普段は隠して画面を広く保つ）
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showAddDecisionModal, setShowAddDecisionModal] = useState(false);
+  const [showAddMemoModal, setShowAddMemoModal] = useState(false);
+  const [showRoleTableModal, setShowRoleTableModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   // 新規タスク入力用
@@ -940,7 +743,7 @@ export default function App() {
   const [newTaskWhat, setNewTaskWhat] = useState("");
   const [newTaskImportance, setNewTaskImportance] = useState(0);
 
-  // タスク編集用
+  // タスク編集用（モーダルで広く編集）
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskNames, setEditTaskNames] = useState([]);
   const [editTaskRoles, setEditTaskRoles] = useState([]);
@@ -959,8 +762,7 @@ export default function App() {
   const [newDecImportance, setNewDecImportance] = useState(0);
 
   // 決定事項編集用
-  const [editingDecId, setEditingDecId] = useState(null);
-  const [editDecForm, setEditDecForm] = useState({ title: "", content: "", importance: 0 });
+  const [editingDec, setEditingDec] = useState(null); // { catId, id, title, content, importance }
 
   // マイページ：自由メモ用
   const [newMemoTitle, setNewMemoTitle] = useState("");
@@ -969,7 +771,6 @@ export default function App() {
   const [editMemoForm, setEditMemoForm] = useState({ title: "", body: "" });
   const [showCompletedInMyPage, setShowCompletedInMyPage] = useState(false);
 
-  const lastLocalWriteTimeRef = useRef(0);
   const broadcastChannelRef = useRef(null);
 
   const currentUser = authInfo?.userName || "";
@@ -978,6 +779,7 @@ export default function App() {
     [currentUser]
   );
 
+  // ワンクッション確認ダイアログ
   const requestConfirm = ({
     title,
     message,
@@ -985,13 +787,7 @@ export default function App() {
     confirmColor = "bg-indigo-600 hover:bg-indigo-700",
     onConfirm
   }) => {
-    setConfirmDialog({
-      title,
-      message,
-      confirmLabel,
-      confirmColor,
-      onConfirm
-    });
+    setConfirmDialog({ title, message, confirmLabel, confirmColor, onConfirm });
   };
 
   // --- 即時同期 ---
@@ -1023,7 +819,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v5");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v6");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -1037,18 +833,14 @@ export default function App() {
       if (e.key === LOCAL_STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          if (parsed && Array.isArray(parsed.tasks)) {
-            setBoardState(parsed);
-          }
+          if (parsed && Array.isArray(parsed.tasks)) setBoardState(parsed);
         } catch (err) {}
       }
     };
     window.addEventListener("storage", onStorage);
 
     const onFocusOrVisible = () => {
-      if (document.visibilityState === "visible") {
-        fetchLatestNow();
-      }
+      if (document.visibilityState === "visible") fetchLatestNow();
     };
     window.addEventListener("focus", onFocusOrVisible);
     document.addEventListener("visibilitychange", onFocusOrVisible);
@@ -1089,10 +881,7 @@ export default function App() {
         }
         setSyncStatus("synced");
       },
-      (err) => {
-        console.warn("Firestore同期エラー:", err);
-        setSyncStatus("local");
-      }
+      () => setSyncStatus("local")
     );
 
     return () => {
@@ -1106,7 +895,6 @@ export default function App() {
 
   const commitState = (nextState, logMessage) => {
     const nowTs = Date.now();
-    lastLocalWriteTimeRef.current = nowTs;
     const newLog = {
       id: "log-" + nowTs,
       user: currentUser || "メンバー",
@@ -1124,21 +912,14 @@ export default function App() {
     setBoardState(updated);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
     if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.postMessage(updated);
-      } catch (e) {}
+      try { broadcastChannelRef.current.postMessage(updated); } catch (e) {}
     }
 
     if (db) {
       setSyncStatus("saving");
       setDoc(doc(db, SYNC_COLLECTION, SYNC_DOC_ID), updated)
-        .then(() => {
-          setSyncStatus("synced");
-        })
-        .catch((e) => {
-          console.warn("Firestore保存エラー:", e);
-          setSyncStatus("local");
-        });
+        .then(() => setSyncStatus("synced"))
+        .catch(() => setSyncStatus("local"));
     }
   };
 
@@ -1146,18 +927,14 @@ export default function App() {
   const handleLogin = (nameToLogin) => {
     if (!nameToLogin) return;
     const now = Date.now();
-    const newAuth = {
-      userName: nameToLogin,
-      loginAt: now,
-      expiresAt: now + LOGIN_DURATION_MS
-    };
+    const newAuth = { userName: nameToLogin, loginAt: now, expiresAt: now + LOGIN_DURATION_MS };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuth));
     setAuthInfo(newAuth);
   };
 
   const handleLogout = () => {
     requestConfirm({
-      title: "ログアウト（ユーザー切替）の確認",
+      title: "ログアウト（名前切替）の確認",
       message: `現在「${currentUser}」でログイン中です。ログアウトして名前選択画面に戻りますか？`,
       confirmLabel: "ログアウトする",
       confirmColor: "bg-red-600 hover:bg-red-700",
@@ -1169,7 +946,7 @@ export default function App() {
     });
   };
 
-  // --- タスク操作（重要度＆並び替え対応・ワンクッション確認付き） ---
+  // --- タスク操作（すべてワンクッション確認付き） ---
   const handleToggleTask = (taskId) => {
     const target = boardState.tasks.find((t) => t.id === taskId);
     if (!target) return;
@@ -1179,42 +956,40 @@ export default function App() {
     requestConfirm({
       title: nextCompleted ? "ToDo完了の確認" : "未完了へ戻す確認",
       message: nextCompleted
-        ? `「${shortWhat}」（担当: ${target.who}）を【完了済みリスト】へ移動しますか？`
-        : `「${shortWhat}」（担当: ${target.who}）を【やるべきことリスト（未完了）】に戻しますか？`,
+        ? `「${shortWhat}」（担当: ${target.who}）を【完了済み】にしますか？`
+        : `「${shortWhat}」（担当: ${target.who}）を【未完了のToDo】に戻しますか？`,
       confirmLabel: nextCompleted ? "完了にする" : "未完了に戻す",
       confirmColor: nextCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700",
       onConfirm: () => {
         const nextTasks = boardState.tasks.map((t) =>
-          t.id === taskId
-            ? { ...t, completed: nextCompleted, updatedBy: currentUser, updatedAt: formatNow() }
-            : t
+          t.id === taskId ? { ...t, completed: nextCompleted, updatedBy: currentUser, updatedAt: formatNow() } : t
         );
         commitState(
           { ...boardState, tasks: nextTasks },
           nextCompleted
-            ? `タスク「${shortWhat}」（担当: ${target.who}）を【完了済み】に移動しました`
-            : `タスク「${shortWhat}」（担当: ${target.who}）を【やるべきこと（未完了）】に戻しました`
+            ? `タスク「${shortWhat}」を【完了済み】に移動しました`
+            : `タスク「${shortWhat}」を【未完了】に戻しました`
         );
       }
     });
   };
 
-  const handleAddTask = (isCompleted = false, presetWho = null) => {
+  const handleAddTask = (isCompleted = false) => {
     const what = newTaskWhat.trim();
     if (!what) {
-      alert("「何をやるか（具体的な内容）」を入力してください。");
+      alert("「何をやるか（内容）」を入力してください。");
       return;
     }
-    const who = presetWho || buildWhoString(newTaskNames, newTaskRoles, newTaskWhoFree);
+    const who = buildWhoString(newTaskNames, newTaskRoles, newTaskWhoFree);
     const when = buildWhenString(newTaskDates, newTaskWhenFree);
     const impMeta = getImportanceMeta(newTaskImportance);
     const shortWhat = what.length > 28 ? what.slice(0, 28) + "…" : what;
 
     requestConfirm({
-      title: isCompleted ? "完了済みリストへの追加確認" : "やるべきこと（ToDo）の追加確認",
-      message: `以下の内容でリストに追加しますか？\n\n・誰が：${who}\n・いつまで：${when}\n・重要度：${impMeta.label}\n・内容：${what}`,
+      title: isCompleted ? "完了済みリストへの追加確認" : "ToDoの追加確認",
+      message: `以下の内容で追加しますか？\n\n・誰が：${who}\n・いつまで：${when}\n・重要度：${impMeta.label}\n・内容：${what}`,
       confirmLabel: "追加する",
-      confirmColor: isCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700",
+      confirmColor: isCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700",
       onConfirm: () => {
         const nowTs = Date.now();
         const newTask = {
@@ -1235,9 +1010,10 @@ export default function App() {
         setNewTaskWhenFree("");
         setNewTaskWhat("");
         setNewTaskImportance(0);
+        setShowAddTaskModal(false);
         commitState(
           { ...boardState, tasks: [newTask, ...boardState.tasks] },
-          `${isCompleted ? "完了済みリスト" : "やるべきことリスト"}に「${shortWhat}」（担当: ${who} / 重要度: ${impMeta.short}）を追加しました`
+          `タスク「${shortWhat}」（担当: ${who}）を追加しました`
         );
       }
     });
@@ -1246,7 +1022,7 @@ export default function App() {
   const startEditTask = (t) => {
     requestConfirm({
       title: "ToDoの編集開始",
-      message: `「${t.what.slice(0, 30)}${t.what.length > 30 ? "…" : ""}」（担当: ${t.who}）の編集を開始しますか？`,
+      message: `「${t.what.slice(0, 32)}${t.what.length > 32 ? "…" : ""}」の編集画面を開きますか？`,
       confirmLabel: "編集する",
       onConfirm: () => {
         setEditingTaskId(t.id);
@@ -1261,7 +1037,7 @@ export default function App() {
     });
   };
 
-  const saveEditTask = (id) => {
+  const saveEditTask = () => {
     if (!editTaskWhat.trim()) {
       alert("タスク内容を入力してください。");
       return;
@@ -1274,27 +1050,16 @@ export default function App() {
 
     requestConfirm({
       title: "編集完了（保存）の確認",
-      message: `以下の内容で編集を完了し、保存しますか？\n\n・誰が：${finalWho}\n・いつまで：${finalWhen}\n・重要度：${impMeta.label}\n・内容：${finalWhat}`,
+      message: `以下の内容で保存しますか？\n\n・誰が：${finalWho}\n・いつまで：${finalWhen}\n・重要度：${impMeta.label}\n・内容：${finalWhat}`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextTasks = boardState.tasks.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                who: finalWho,
-                when: finalWhen,
-                what: finalWhat,
-                importance: finalImp,
-                updatedBy: currentUser,
-                updatedAt: formatNow()
-              }
+          t.id === editingTaskId
+            ? { ...t, who: finalWho, when: finalWhen, what: finalWhat, importance: finalImp, updatedBy: currentUser, updatedAt: formatNow() }
             : t
         );
         setEditingTaskId(null);
-        commitState(
-          { ...boardState, tasks: nextTasks },
-          `タスク（担当: ${finalWho} / 重要度: ${impMeta.short}）の内容を編集しました`
-        );
+        commitState({ ...boardState, tasks: nextTasks }, `タスク（担当: ${finalWho}）を編集しました`);
       }
     });
   };
@@ -1309,15 +1074,11 @@ export default function App() {
       confirmColor: "bg-red-600 hover:bg-red-700",
       onConfirm: () => {
         const nextTasks = boardState.tasks.filter((t) => t.id !== id);
-        commitState(
-          { ...boardState, tasks: nextTasks },
-          `タスク（担当: ${target.who}）を削除しました`
-        );
+        commitState({ ...boardState, tasks: nextTasks }, `タスク（担当: ${target.who}）を削除しました`);
       }
     });
   };
 
-  // 手動の上下並び替え（ToDo / 完了済み共通）
   const moveTask = (id, direction) => {
     const idx = boardState.tasks.findIndex((t) => t.id === id);
     if (idx === -1) return;
@@ -1325,17 +1086,11 @@ export default function App() {
     let swapIdx = -1;
     if (direction === -1) {
       for (let i = idx - 1; i >= 0; i--) {
-        if (boardState.tasks[i].completed === targetCompleted) {
-          swapIdx = i;
-          break;
-        }
+        if (boardState.tasks[i].completed === targetCompleted) { swapIdx = i; break; }
       }
     } else {
       for (let i = idx + 1; i < boardState.tasks.length; i++) {
-        if (boardState.tasks[i].completed === targetCompleted) {
-          swapIdx = i;
-          break;
-        }
+        if (boardState.tasks[i].completed === targetCompleted) { swapIdx = i; break; }
       }
     }
     if (swapIdx === -1) return;
@@ -1344,42 +1099,27 @@ export default function App() {
     nextTasks[idx] = nextTasks[swapIdx];
     nextTasks[swapIdx] = tmp;
 
-    if (targetCompleted) {
-      setDoneSortMode("manual");
-    } else {
-      setTodoSortMode("manual");
-    }
-    commitState(
-      { ...boardState, tasks: nextTasks },
-      `${targetCompleted ? "完了済みリスト" : "やるべきことリスト"}の表示順を並び替えました`
-    );
+    if (targetCompleted) setDoneSortMode("manual");
+    else setTodoSortMode("manual");
+    commitState({ ...boardState, tasks: nextTasks }, `タスクの表示順を並び替えました`);
   };
 
-  // リスト自体の並び順を「追加順（昇順・降順）」「重要度順」等で一括確定保存する機能
   const applyPermanentTaskSort = (isCompletedTarget, mode) => {
     const effectiveMode = mode === "manual" ? "imp_desc" : mode;
     const modeLabel = SORT_MODE_LABELS[effectiveMode] || effectiveMode;
-    const listName = isCompletedTarget ? "すでに終わっていること（完了済みリスト）" : "やるべきことリスト（ToDo）";
+    const listName = isCompletedTarget ? "完了済みリスト" : "やるべきことリスト（ToDo）";
     requestConfirm({
-      title: "リストの並び順を一括更新",
+      title: "並び順の確定保存",
       message: `${listName}の並び順を「${modeLabel}」で確定し、全員の画面に保存しますか？`,
-      confirmLabel: "並び替えて保存する",
+      confirmLabel: "保存する",
       onConfirm: () => {
         const targetItems = boardState.tasks.filter((t) => Boolean(t.completed) === Boolean(isCompletedTarget));
         const otherItems = boardState.tasks.filter((t) => Boolean(t.completed) !== Boolean(isCompletedTarget));
         const sortedTarget = [...targetItems].sort((a, b) => compareItems(a, b, effectiveMode));
-        const nextTasks = isCompletedTarget
-          ? [...otherItems, ...sortedTarget]
-          : [...sortedTarget, ...otherItems];
-        if (isCompletedTarget) {
-          setDoneSortMode("manual");
-        } else {
-          setTodoSortMode("manual");
-        }
-        commitState(
-          { ...boardState, tasks: nextTasks },
-          `${listName}を「${modeLabel}」に並び替えました`
-        );
+        const nextTasks = isCompletedTarget ? [...otherItems, ...sortedTarget] : [...sortedTarget, ...otherItems];
+        if (isCompletedTarget) setDoneSortMode("manual");
+        else setTodoSortMode("manual");
+        commitState({ ...boardState, tasks: nextTasks }, `${listName}を「${modeLabel}」に並び替えました`);
       }
     });
   };
@@ -1395,28 +1135,20 @@ export default function App() {
     const title = newMemoTitle.trim() || "メモ";
     const body = newMemoBody.trim();
     if (!body) {
-      alert("自由メモの内容を入力してください。");
+      alert("メモの内容を入力してください。");
       return;
     }
     requestConfirm({
       title: "自由メモの追加確認",
-      message: `マイページに自由メモ「${title}」を追加しますか？`,
+      message: `自由メモ「${title}」を追加しますか？`,
       confirmLabel: "追加する",
       onConfirm: () => {
-        const newMemo = {
-          id: "memo-" + Date.now(),
-          title,
-          body,
-          updatedAt: formatNow()
-        };
-        const nextUserMemos = [newMemo, ...userMemoList];
-        const nextMemos = { ...(boardState.memos || {}), [currentUser]: nextUserMemos };
+        const newMemo = { id: "memo-" + Date.now(), title, body, updatedAt: formatNow() };
+        const nextMemos = { ...(boardState.memos || {}), [currentUser]: [newMemo, ...userMemoList] };
         setNewMemoTitle("");
         setNewMemoBody("");
-        commitState(
-          { ...boardState, memos: nextMemos },
-          `${currentUser}がマイページ自由メモを更新しました`
-        );
+        setShowAddMemoModal(false);
+        commitState({ ...boardState, memos: nextMemos }, `${currentUser}がマイページ自由メモを追加しました`);
       }
     });
   };
@@ -1424,7 +1156,7 @@ export default function App() {
   const startEditMemo = (memo) => {
     requestConfirm({
       title: "自由メモの編集開始",
-      message: `メモ「${memo.title}」の編集を開始しますか？`,
+      message: `メモ「${memo.title}」を編集しますか？`,
       confirmLabel: "編集する",
       onConfirm: () => {
         setEditingMemoId(memo.id);
@@ -1439,21 +1171,16 @@ export default function App() {
       return;
     }
     requestConfirm({
-      title: "自由メモの編集完了（保存）",
-      message: `メモ「${editMemoForm.title || "メモ"}」の編集内容を保存しますか？`,
+      title: "自由メモの保存確認",
+      message: `メモ「${editMemoForm.title || "メモ"}」の変更を保存しますか？`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextUserMemos = userMemoList.map((m) =>
-          m.id === memoId
-            ? { ...m, title: editMemoForm.title.trim() || "メモ", body: editMemoForm.body.trim(), updatedAt: formatNow() }
-            : m
+          m.id === memoId ? { ...m, title: editMemoForm.title.trim() || "メモ", body: editMemoForm.body.trim(), updatedAt: formatNow() } : m
         );
         const nextMemos = { ...(boardState.memos || {}), [currentUser]: nextUserMemos };
         setEditingMemoId(null);
-        commitState(
-          { ...boardState, memos: nextMemos },
-          `${currentUser}がマイページ自由メモを編集しました`
-        );
+        commitState({ ...boardState, memos: nextMemos }, `${currentUser}が自由メモを編集しました`);
       }
     });
   };
@@ -1467,46 +1194,16 @@ export default function App() {
       onConfirm: () => {
         const nextUserMemos = userMemoList.filter((m) => m.id !== memoId);
         const nextMemos = { ...(boardState.memos || {}), [currentUser]: nextUserMemos };
-        commitState(
-          { ...boardState, memos: nextMemos },
-          `${currentUser}がマイページ自由メモを削除しました`
-        );
+        commitState({ ...boardState, memos: nextMemos }, `${currentUser}が自由メモを削除しました`);
       }
     });
   };
 
-  // --- 決定事項＆選択肢（カテゴリ）操作 ---
+  // --- 決定事項＆カテゴリ操作 ---
   const formatCategoryTitle = (raw) => {
     const trimmed = (raw || "").trim();
     if (!trimmed) return "";
     return trimmed.startsWith("■") ? trimmed : "■ " + trimmed;
-  };
-
-  const handleRegisterCategoryOnly = () => {
-    const formatted = formatCategoryTitle(newCustomCatName);
-    if (!formatted) {
-      alert("新しく追加する選択肢（会議名やテーマ名）を入力してください。");
-      return;
-    }
-    requestConfirm({
-      title: "新しい選択肢（見出し）の追加確認",
-      message: `「今まで決まったこと」に新しい見出し「${formatted}」を追加しますか？`,
-      confirmLabel: "追加する",
-      onConfirm: () => {
-        const newId = "cat-" + Date.now();
-        const nextDecisions = [
-          ...boardState.decisions,
-          { id: newId, category: formatted, items: [] }
-        ];
-        setNewCustomCatName("");
-        setShowCustomCatBox(false);
-        setSelectedCatId(newId);
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `決定事項に新しい選択肢（見出し）「${formatted}」を追加しました`
-        );
-      }
-    });
   };
 
   const handleAddDecision = () => {
@@ -1515,12 +1212,25 @@ export default function App() {
     const content = newDecContent.trim();
 
     if ((selectedCatId === NEW_CAT_VALUE || showCustomCatBox) && customCatFormatted && !title && !content) {
-      handleRegisterCategoryOnly();
+      requestConfirm({
+        title: "新しい見出しの追加確認",
+        message: `新しいカテゴリ見出し「${customCatFormatted}」を追加しますか？`,
+        confirmLabel: "追加する",
+        onConfirm: () => {
+          const newId = "cat-" + Date.now();
+          const nextDecisions = [...boardState.decisions, { id: newId, category: customCatFormatted, items: [] }];
+          setNewCustomCatName("");
+          setShowCustomCatBox(false);
+          setSelectedCatId(newId);
+          setShowAddDecisionModal(false);
+          commitState({ ...boardState, decisions: nextDecisions }, `カテゴリ見出し「${customCatFormatted}」を追加しました`);
+        }
+      });
       return;
     }
 
     if (!title && !content) {
-      alert("追加する決定事項の「項目名」または「決まった内容」を入力してください。");
+      alert("「項目名」または「決まった内容」を入力してください。");
       return;
     }
 
@@ -1537,13 +1247,12 @@ export default function App() {
 
         if (selectedCatId === NEW_CAT_VALUE || (showCustomCatBox && customCatFormatted)) {
           if (!customCatFormatted) {
-            alert("新しく追加する選択肢（会議名やテーマ名）を入力してください。");
+            alert("新しいカテゴリ名を入力してください。");
             return;
           }
           const existing = nextDecisions.find((c) => c.category === customCatFormatted);
-          if (existing) {
-            targetCatId = existing.id;
-          } else {
+          if (existing) targetCatId = existing.id;
+          else {
             targetCatId = "cat-" + Date.now();
             nextDecisions.push({ id: targetCatId, category: customCatFormatted, items: [] });
           }
@@ -1570,22 +1279,21 @@ export default function App() {
         setNewDecTitle("");
         setNewDecContent("");
         setNewDecImportance(0);
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `決定事項「${cleanTitle}」（重要度: ${impMeta.short}）を追加入力しました`
-        );
+        setShowAddDecisionModal(false);
+        commitState({ ...boardState, decisions: nextDecisions }, `決定事項「${cleanTitle}」を追加しました`);
       }
     });
   };
 
-  const startEditDecision = (item) => {
+  const startEditDecision = (catId, item) => {
     requestConfirm({
       title: "決定事項の編集開始",
-      message: `決定事項「${item.title}」の編集を開始しますか？`,
+      message: `決定事項「${item.title}」の編集画面を開きますか？`,
       confirmLabel: "編集する",
       onConfirm: () => {
-        setEditingDecId(item.id);
-        setEditDecForm({
+        setEditingDec({
+          catId,
+          id: item.id,
           title: item.title,
           content: item.content,
           importance: Number(item.importance) || 0
@@ -1594,44 +1302,35 @@ export default function App() {
     });
   };
 
-  const saveEditDecision = (catId, decId) => {
-    if (!editDecForm.title.trim() && !editDecForm.content.trim()) {
+  const saveEditDecision = () => {
+    if (!editingDec) return;
+    if (!editingDec.title.trim() && !editingDec.content.trim()) {
       alert("内容を入力してください。");
       return;
     }
-    const cleanTitle = editDecForm.title.trim().replace(/[：:]$/, "");
-    const finalImp = Number(editDecForm.importance) || 0;
+    const cleanTitle = editingDec.title.trim().replace(/[：:]$/, "");
+    const finalImp = Number(editingDec.importance) || 0;
     const impMeta = getImportanceMeta(finalImp);
 
     requestConfirm({
-      title: "決定事項の編集完了（保存）",
-      message: `決定事項「${cleanTitle}」（重要度: ${impMeta.label}）の編集内容を保存しますか？`,
+      title: "決定事項の保存確認",
+      message: `決定事項「${cleanTitle}」（重要度: ${impMeta.label}）を保存しますか？`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextDecisions = boardState.decisions.map((cat) =>
-          cat.id !== catId
+          cat.id !== editingDec.catId
             ? cat
             : {
                 ...cat,
                 items: cat.items.map((it) =>
-                  it.id === decId
-                    ? {
-                        ...it,
-                        title: cleanTitle,
-                        content: editDecForm.content.trim(),
-                        importance: finalImp,
-                        updatedBy: currentUser,
-                        updatedAt: formatNow()
-                      }
+                  it.id === editingDec.id
+                    ? { ...it, title: cleanTitle, content: editingDec.content.trim(), importance: finalImp, updatedBy: currentUser, updatedAt: formatNow() }
                     : it
                 )
               }
         );
-        setEditingDecId(null);
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `決定事項「${cleanTitle}」（重要度: ${impMeta.short}）を編集しました`
-        );
+        setEditingDec(null);
+        commitState({ ...boardState, decisions: nextDecisions }, `決定事項「${cleanTitle}」を編集しました`);
       }
     });
   };
@@ -1646,15 +1345,11 @@ export default function App() {
         const nextDecisions = boardState.decisions.map((cat) =>
           cat.id !== catId ? cat : { ...cat, items: cat.items.filter((it) => it.id !== decId) }
         );
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `決定事項「${title}」を削除しました`
-        );
+        commitState({ ...boardState, decisions: nextDecisions }, `決定事項「${title}」を削除しました`);
       }
     });
   };
 
-  // 決定事項の各項目の上下並び替え
   const moveDecisionItem = (catId, decId, direction) => {
     const cat = boardState.decisions.find((c) => c.id === catId);
     if (!cat) return;
@@ -1668,17 +1363,11 @@ export default function App() {
     nextItems[idx] = nextItems[targetIdx];
     nextItems[targetIdx] = tmp;
 
-    const nextDecisions = boardState.decisions.map((c) =>
-      c.id === catId ? { ...c, items: nextItems } : c
-    );
+    const nextDecisions = boardState.decisions.map((c) => (c.id === catId ? { ...c, items: nextItems } : c));
     setDecisionSortMode("manual");
-    commitState(
-      { ...boardState, decisions: nextDecisions },
-      `決定事項「${tmp.title}」の表示順を並び替えました`
-    );
+    commitState({ ...boardState, decisions: nextDecisions }, `決定事項「${tmp.title}」の順序を移動しました`);
   };
 
-  // 決定事項のカテゴリ（見出し）全体の上下並び替え
   const moveCategory = (catId, direction) => {
     const idx = boardState.decisions.findIndex((c) => c.id === catId);
     if (idx === -1) return;
@@ -1689,30 +1378,23 @@ export default function App() {
     const tmp = nextDecisions[idx];
     nextDecisions[idx] = nextDecisions[targetIdx];
     nextDecisions[targetIdx] = tmp;
-    commitState(
-      { ...boardState, decisions: nextDecisions },
-      `カテゴリ見出し「${tmp.category}」の表示順を並び替えました`
-    );
+    commitState({ ...boardState, decisions: nextDecisions }, `カテゴリ「${tmp.category}」の順序を移動しました`);
   };
 
-  // 決定事項を選択中の並び順（追加順・重要度順）で一括確定保存
   const applyPermanentDecisionSort = (mode) => {
     const effectiveMode = mode === "manual" ? "imp_desc" : mode;
     const modeLabel = SORT_MODE_LABELS[effectiveMode] || effectiveMode;
     requestConfirm({
-      title: "決定事項の並び順を一括更新",
+      title: "決定事項の並び順を確定保存",
       message: `各カテゴリ内の決定事項を「${modeLabel}」で並び替えて保存しますか？`,
-      confirmLabel: "並び替えて保存する",
+      confirmLabel: "保存する",
       onConfirm: () => {
         const nextDecisions = boardState.decisions.map((cat) => ({
           ...cat,
           items: [...cat.items].sort((a, b) => compareItems(a, b, effectiveMode))
         }));
         setDecisionSortMode("manual");
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `決定事項を「${modeLabel}」に並び替えました`
-        );
+        commitState({ ...boardState, decisions: nextDecisions }, `決定事項を「${modeLabel}」に並び替えました`);
       }
     });
   };
@@ -1720,19 +1402,16 @@ export default function App() {
   const editCategoryName = (catId, currentName) => {
     requestConfirm({
       title: "見出し名の編集確認",
-      message: `カテゴリ見出し「${currentName}」を編集しますか？`,
-      confirmLabel: "編集する",
+      message: `カテゴリ見出し「${currentName}」の名前を変更しますか？`,
+      confirmLabel: "変更する",
       onConfirm: () => {
-        const nextName = window.prompt("選択肢（見出し・会議名）を編集してください：", currentName);
+        const nextName = window.prompt("新しい見出し名を入力してください：", currentName);
         if (!nextName || !nextName.trim()) return;
         const formatted = formatCategoryTitle(nextName);
         const nextDecisions = boardState.decisions.map((cat) =>
           cat.id === catId ? { ...cat, category: formatted } : cat
         );
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `カテゴリ見出しを「${formatted}」に変更しました`
-        );
+        commitState({ ...boardState, decisions: nextDecisions }, `見出しを「${formatted}」に変更しました`);
       }
     });
   };
@@ -1745,15 +1424,11 @@ export default function App() {
       confirmColor: "bg-red-600 hover:bg-red-700",
       onConfirm: () => {
         const nextDecisions = boardState.decisions.filter((cat) => cat.id !== catId);
-        commitState(
-          { ...boardState, decisions: nextDecisions },
-          `カテゴリ「${currentName}」を削除しました`
-        );
+        commitState({ ...boardState, decisions: nextDecisions }, `カテゴリ「${currentName}」を削除しました`);
       }
     });
   };
 
-  // Word (.doc) ダウンロード出力
   const exportWordDoc = () => {
     const todoList = boardState.tasks.filter((t) => !t.completed);
     const doneList = boardState.tasks.filter((t) => t.completed);
@@ -1764,32 +1439,28 @@ export default function App() {
       decHtml += `<h3 style="color:#2b579a;margin-top:12pt;margin-bottom:4pt;">${esc(cat.category)}</h3><ul>`;
       cat.items.forEach((it) => {
         const imp = Number(it.importance) || 0;
-        const impText = imp > 0 ? `<span style="color:#c62828;font-weight:bold;">[重要度★${imp}] </span>` : "";
+        const impText = imp > 0 ? `<span style="color:#c62828;font-weight:bold;">[★${imp}] </span>` : "";
         decHtml += `<li style="margin-bottom:4pt;">${impText}<b>${esc(it.title)}：</b>${esc(it.content)}</li>`;
       });
       decHtml += `</ul>`;
     });
 
     const makeRows = (arr, symbol) =>
-      arr
-        .map((t) => {
-          const imp = Number(t.importance) || 0;
-          const impLabel = imp > 0 ? `★${imp}` : "なし";
-          return `<tr><td style="text-align:center;width:32pt;">${symbol}</td><td style="text-align:center;width:45pt;font-weight:bold;">${impLabel}</td><td style="font-weight:bold;width:105pt;">${esc(
-            t.who
-          )}</td><td style="width:90pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`;
-        })
-        .join("");
+      arr.map((t) => {
+        const imp = Number(t.importance) || 0;
+        const impLabel = imp > 0 ? `★${imp}` : "-";
+        return `<tr><td style="text-align:center;width:32pt;">${symbol}</td><td style="text-align:center;width:40pt;font-weight:bold;">${impLabel}</td><td style="font-weight:bold;width:105pt;">${esc(t.who)}</td><td style="width:90pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`;
+      }).join("");
 
     const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>WPB 幹部代会議 統合まとめ</title>
+      <head><meta charset='utf-8'><title>WPB 幹部代会議 まとめ</title>
       <style>body{font-family:"Meiryo",sans-serif;font-size:10pt;}h1{font-size:15pt;color:#1b365d;text-align:center;}h2{font-size:12.5pt;color:#1b365d;border-bottom:2px solid #1b365d;padding-bottom:3pt;margin-top:16pt;}table{border-collapse:collapse;width:100%;margin-top:6pt;}th,td{border:1px solid #888;padding:5pt;vertical-align:top;font-size:9.5pt;}th{background:#1b365d;color:#fff;}</style></head>
       <body>
-        <h1>2026年10月〜11月11日 幹文連・幹部代会議 統合総括</h1>
-        <h2>1. これから誰がいつまでに何をやるか（やるべきことリスト / ToDo）</h2>
-        <table><tr><th>完了</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>何をやるか</th></tr>${makeRows(todoList, "☐")}</table>
-        <h2>2. すでに終わっているはずのこと（完了済みリスト）</h2>
-        <table><tr><th>完了</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>何をやったか</th></tr>${makeRows(doneList, "☑")}</table>
+        <h1>WPB 幹部代会議 決定事項・ToDoまとめ</h1>
+        <h2>1. やるべきことリスト（ToDo）</h2>
+        <table><tr><th>状態</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>内容</th></tr>${makeRows(todoList, "☐")}</table>
+        <h2>2. 完了済みリスト</h2>
+        <table><tr><th>状態</th><th>重要度</th><th>誰が</th><th>いつまでに</th><th>内容</th></tr>${makeRows(doneList, "☑")}</table>
         <h2>3. 今まで決まったこと</h2>
         ${decHtml}
       </body></html>`;
@@ -1797,11 +1468,11 @@ export default function App() {
     const blob = new Blob(["\ufeff", html], { type: "application/msword" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "2026_幹部代会議_決定事項・ToDoまとめ.doc";
+    a.download = "WPB_幹部代会議_決定事項・ToDoまとめ.doc";
     a.click();
   };
 
-  // --- 集計＆フィルタリング＆ソート ---
+  // --- フィルタリング＆ソート集計 ---
   const matchImportanceFilter = (impValue) => {
     const imp = Number(impValue) || 0;
     if (filterImportance === "ALL") return true;
@@ -1818,18 +1489,14 @@ export default function App() {
     const matchTask = (t) => {
       const matchWho = filterWho === "ALL" || t.who.includes(filterWho);
       const matchImp = matchImportanceFilter(t.importance);
-      const matchQ =
-        !q ||
-        t.who.toLowerCase().includes(q) ||
-        t.when.toLowerCase().includes(q) ||
-        t.what.toLowerCase().includes(q);
+      const matchQ = !q || t.who.toLowerCase().includes(q) || t.when.toLowerCase().includes(q) || t.what.toLowerCase().includes(q);
       return matchWho && matchImp && matchQ;
     };
 
     let todos = boardState.tasks.filter((t) => !t.completed && matchTask(t));
     let dones = boardState.tasks.filter((t) => t.completed && matchTask(t));
     let myTodos = boardState.tasks.filter(
-      (t) => !t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance)
+      (t) => !t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q))
     );
     let myDones = boardState.tasks.filter(
       (t) => t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance)
@@ -1845,240 +1512,232 @@ export default function App() {
     }
 
     const decCount = boardState.decisions.reduce((acc, c) => acc + c.items.length, 0);
-    return {
-      todoList: todos,
-      doneList: dones,
-      myTodoList: myTodos,
-      myDoneList: myDones,
-      totalDecisions: decCount
-    };
+    return { todoList: todos, doneList: dones, myTodoList: myTodos, myDoneList: myDones, totalDecisions: decCount };
   }, [boardState, searchQuery, filterWho, filterImportance, currentMemberObj, todoSortMode, doneSortMode]);
 
   const allUncompletedCount = boardState.tasks.filter((t) => !t.completed).length;
   const allCompletedCount = boardState.tasks.filter((t) => t.completed).length;
-  const progressPercent =
-    boardState.tasks.length > 0
-      ? Math.round((allCompletedCount / boardState.tasks.length) * 100)
-      : 0;
+  const hasActiveFilter = Boolean(searchQuery || filterWho !== "ALL" || filterImportance !== "ALL");
 
-  // タスク行の共通レンダラー
+  // --- すっきり見やすいタスクカード ---
   const renderTaskCard = (t) => {
-    const isEditing = editingTaskId === t.id;
     const imp = Number(t.importance) || 0;
     return (
       <div
         key={t.id}
-        className={`group border rounded-2xl p-3.5 transition shadow-xs flex items-start gap-3 ${
+        className={`border rounded-2xl p-4 transition shadow-2xs flex items-start gap-3.5 ${
           t.completed
-            ? "bg-emerald-50/40 border-emerald-200/80"
+            ? "bg-slate-50 border-slate-200 opacity-85"
             : imp === 5
-            ? "bg-rose-50/30 hover:bg-rose-50/50 border-rose-200"
+            ? "bg-rose-50/40 border-rose-200"
             : imp === 4
-            ? "bg-orange-50/20 hover:bg-orange-50/40 border-orange-200"
-            : "bg-white hover:bg-blue-50/30 border-slate-200"
+            ? "bg-orange-50/30 border-orange-200"
+            : "bg-white border-slate-200 hover:border-indigo-200"
         }`}
       >
         <button
           type="button"
           onClick={() => handleToggleTask(t.id)}
-          className={`mt-0.5 transition shrink-0 ${
-            t.completed ? "text-emerald-600 hover:text-slate-500" : "text-slate-400 hover:text-emerald-600"
+          className={`mt-0.5 p-0.5 transition shrink-0 ${
+            t.completed ? "text-emerald-600 hover:text-slate-500" : "text-slate-300 hover:text-emerald-600"
           }`}
-          title={t.completed ? "クリックして未完了に戻す（確認あり）" : "クリックして完了済みに移動（確認あり）"}
+          title={t.completed ? "未完了に戻す" : "完了にする"}
         >
-          {t.completed ? <CheckCircle2 size={22} /> : <Circle size={22} strokeWidth={2.2} />}
+          {t.completed ? <CheckCircle2 size={24} /> : <Circle size={24} strokeWidth={2} />}
         </button>
 
-        {isEditing ? (
-          <div className="flex-1 space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-indigo-200">
-            <div className="text-xs font-bold text-indigo-900">✏️ タスク内容を編集中</div>
-            <WhoSelector
-              selectedNames={editTaskNames}
-              setSelectedNames={setEditTaskNames}
-              selectedRoles={editTaskRoles}
-              setSelectedRoles={setEditTaskRoles}
-              freeText={editTaskWhoFree}
-              setFreeText={setEditTaskWhoFree}
-            />
-            <WhenSelector
-              selectedDates={editTaskDates}
-              setSelectedDates={setEditTaskDates}
-              freeText={editTaskWhenFree}
-              setFreeText={setEditTaskWhenFree}
-            />
-            <ImportanceSelector
-              value={editTaskImportance}
-              onChange={setEditTaskImportance}
-              label="重要度（1〜5 / なし）"
-            />
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">何をやるか（内容）</label>
-              <textarea
-                rows={3}
-                value={editTaskWhat}
-                onChange={(e) => setEditTaskWhat(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingTaskId(null)}
-                className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={() => saveEditTask(t.id)}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs"
-              >
-                💾 編集完了（保存）
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* 上段：バッジと操作ボタン */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <ImportanceBadge importance={t.importance} />
               <span
-                className={`font-bold text-xs px-2.5 py-0.5 rounded-lg border ${
-                  t.completed
-                    ? "bg-emerald-100 text-emerald-900 border-emerald-200"
-                    : "bg-indigo-50 text-indigo-800 border-indigo-200"
+                className={`font-bold text-xs px-2.5 py-1 rounded-lg ${
+                  t.completed ? "bg-slate-200 text-slate-700" : "bg-indigo-50 text-indigo-900"
                 }`}
               >
                 👤 {t.who}
               </span>
-              <span className="bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[11px] px-2 py-0.5 rounded-lg">
-                ⏰ 期限: {t.when}
+              <span className="bg-amber-50 text-amber-900 border border-amber-200/80 font-bold text-xs px-2.5 py-1 rounded-lg">
+                ⏰ {t.when}
               </span>
-              {t.updatedBy && t.updatedBy !== "初期データ" && (
-                <span className="text-[10px] text-slate-400">
-                  （更新: {t.updatedBy} {t.updatedAt}）
-                </span>
-              )}
             </div>
-            <p
-              onClick={() => startEditTask(t)}
-              className="text-xs sm:text-sm text-slate-800 whitespace-pre-wrap leading-relaxed cursor-pointer hover:bg-slate-100/70 rounded p-1 -m-1"
-              title="クリックして編集（確認あり）"
-            >
-              {t.what}
-            </p>
-          </div>
-        )}
 
-        {!isEditing && (
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => moveTask(t.id, -1)}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-              title="上へ移動"
-            >
-              <ArrowUp size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveTask(t.id, 1)}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-              title="下へ移動"
-            >
-              <ArrowDown size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => startEditTask(t)}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-              title="編集"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => deleteTask(t.id)}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-              title="削除"
-            >
-              <Trash2 size={14} />
-            </button>
+            {/* 操作ボタン（間隔を広げて押しやすく） */}
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
+              <button
+                type="button"
+                onClick={() => moveTask(t.id, -1)}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                title="上へ移動"
+              >
+                <ArrowUp size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveTask(t.id, 1)}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                title="下へ移動"
+              >
+                <ArrowDown size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => startEditTask(t)}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                title="編集"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteTask(t.id)}
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                title="削除"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* 下段：本文 */}
+          <p
+            onClick={() => startEditTask(t)}
+            className={`text-sm leading-relaxed whitespace-pre-wrap cursor-pointer rounded-lg p-1 -m-1 hover:bg-slate-50 ${
+              t.completed ? "line-through text-slate-500" : "text-slate-800"
+            }`}
+          >
+            {t.what}
+          </p>
+
+          {t.updatedBy && t.updatedBy !== "初期データ" && (
+            <div className="text-[11px] text-slate-400 text-right">
+              更新: {t.updatedBy} ({t.updatedAt})
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  // リストの並び替えコントロールバー共通コンポーネント（追加順［昇順・降順］対応）
-  const renderSortToolbar = (sortMode, setSortMode, onPermanentSort, includeWhoSort = true) => {
-    const sortButtons = [
-      { id: "manual", label: "手動順（↑↓）" },
-      { id: "added_asc", label: "🕒追加順（昇順：古い→新）" },
-      { id: "added_desc", label: "🕒追加順（降順：新→古い）" },
-      { id: "imp_desc", label: "★重要度が高い順" },
-      { id: "imp_asc", label: "★重要度が低い順" }
-    ];
-    if (includeWhoSort) {
-      sortButtons.push({ id: "who_asc", label: "👤担当者順" });
-    }
-    const targetSaveMode = sortMode === "manual" ? "imp_desc" : sortMode;
-
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 mb-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1 mr-1">
-            <ArrowUpDown size={13} className="text-indigo-600" />
-            <span>並び替え:</span>
-          </span>
-          {sortButtons.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setSortMode(opt.id)}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${
-                sortMode === opt.id
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+  // --- コンパクトな並び替え＆絞り込みバー（プルダウン式で画面を圧迫しない） ---
+  const renderCompactControlBar = ({ sortMode, setSortMode, onPermanentSort, includeWhoSort = true }) => (
+    <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xs space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* 並び替えプルダウン */}
+        <div className="flex items-center gap-2 flex-1 min-w-[210px]">
+          <span className="text-xs font-bold text-slate-500 shrink-0">並び順:</span>
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="manual">↕️ 手動順（↑↓ボタンで移動）</option>
+            <option value="added_asc">🕒 追加順（昇順：古い→新しい）</option>
+            <option value="added_desc">🕒 追加順（降順：新しい→古い）</option>
+            <option value="imp_desc">★ 重要度が高い順（★5→なし）</option>
+            <option value="imp_asc">★ 重要度が低い順（★1→なし）</option>
+            {includeWhoSort && <option value="who_asc">👤 担当者名順</option>}
+          </select>
         </div>
-        {onPermanentSort && (
+
+        <div className="flex items-center gap-2">
+          {sortMode !== "manual" && onPermanentSort && (
+            <button
+              type="button"
+              onClick={() => onPermanentSort(sortMode)}
+              className="text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl hover:bg-indigo-100 transition"
+            >
+              ⚡ この順番で全体に保存
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => onPermanentSort(targetSaveMode)}
-            className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-xl transition"
-            title="選択中の並び順で全員の画面の並び順そのものを上書き保存します"
+            onClick={() => setShowFilterBar(!showFilterBar)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition ${
+              showFilterBar || hasActiveFilter
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+            }`}
           >
-            ⚡ {sortMode === "manual" ? "重要度順で確定保存" : "この並び順で確定保存"}
+            <SlidersHorizontal size={14} />
+            <span>検索・絞り込み{hasActiveFilter ? " (適用中)" : ""}</span>
           </button>
-        )}
+        </div>
       </div>
-    );
-  };
+
+      {/* 検索・フィルター展開時のみ表示 */}
+      {(showFilterBar || hasActiveFilter) && (
+        <div className="pt-2.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="キーワード検索..."
+              className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+          </div>
+          <select
+            value={filterWho}
+            onChange={(e) => setFilterWho(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
+          >
+            <option value="ALL">👤 担当者：すべて表示</option>
+            <option value="全員">幹部代全員</option>
+            {KANBU_ROSTER.map((m) => (
+              <option key={m.name} value={m.name}>
+                {m.name}（{m.roles[0]}）
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-1.5">
+            <select
+              value={filterImportance}
+              onChange={(e) => setFilterImportance(e.target.value)}
+              className="flex-1 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-900"
+            >
+              <option value="ALL">★ 重要度：すべて</option>
+              <option value="5">★5（最優先）のみ</option>
+              <option value="4_UP">★4以上</option>
+              <option value="3_UP">★3以上</option>
+              <option value="HAS_IMP">★重要度ありのみ</option>
+              <option value="NONE">重要度なしのみ</option>
+            </select>
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(""); setFilterWho("ALL"); setFilterImportance("ALL"); }}
+                className="px-3 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shrink-0"
+              >
+                リセット
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   // =========================================================================
   // 未ログイン時のログイン画面（幹部代20名から選択・1ヶ月間ログイン維持）
   // =========================================================================
   if (!authInfo) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-blue-900 flex items-center justify-center p-4 font-sans">
-        <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold text-xl flex items-center justify-center mx-auto shadow-sm">
               W
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              WPB 幹部代Sync ログイン
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
-              自分の名前を選択してログインしてください（ログイン後は1ヶ月間維持されます）
+            <h1 className="text-xl font-bold text-slate-900">WPB 幹部代Sync ログイン</h1>
+            <p className="text-xs text-slate-500">
+              自分の名前を選んでログインしてください（1ヶ月間ログインが維持されます）
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[55vh] overflow-y-auto p-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto p-1">
             {KANBU_ROSTER.map((member) => {
               const selected = selectedLoginCandidate === member.name;
               return (
@@ -2086,346 +1745,250 @@ export default function App() {
                   key={member.name}
                   type="button"
                   onClick={() => setSelectedLoginCandidate(member.name)}
-                  className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3 rounded-2xl border text-left transition ${
                     selected
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md scale-[1.02]"
-                      : "bg-slate-50 text-slate-800 border-slate-200 hover:bg-indigo-50 hover:border-indigo-300"
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-slate-50 text-slate-800 border-slate-200 hover:bg-indigo-50"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="font-bold text-sm truncate">{member.name}</span>
-                    {selected && <Check size={16} className="shrink-0" />}
-                  </div>
-                  <div
-                    className={`text-[10px] leading-snug line-clamp-2 ${
-                      selected ? "text-indigo-100" : "text-slate-500"
-                    }`}
-                  >
-                    {member.roles.join(" / ")}
+                  <div className="font-bold text-sm truncate">{member.name}</div>
+                  <div className={`text-[10px] truncate mt-0.5 ${selected ? "text-indigo-100" : "text-slate-500"}`}>
+                    {member.roles[0]}
                   </div>
                 </button>
               );
             })}
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-slate-500">
-              {selectedLoginCandidate ? (
-                <span>
-                  選択中: <strong className="text-indigo-700 text-sm">{selectedLoginCandidate}</strong>
-                </span>
-              ) : (
-                <span>上のリストから自分の名前をタップしてください</span>
-              )}
-            </div>
-            <button
-              type="button"
-              disabled={!selectedLoginCandidate}
-              onClick={() => handleLogin(selectedLoginCandidate)}
-              className={`w-full sm:w-auto px-8 py-3 rounded-2xl font-bold text-sm shadow-md transition ${
-                selectedLoginCandidate
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
-            >
-              この名前でログインする（1ヶ月維持）
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={!selectedLoginCandidate}
+            onClick={() => handleLogin(selectedLoginCandidate)}
+            className={`w-full py-3.5 rounded-2xl font-bold text-sm shadow-sm transition ${
+              selectedLoginCandidate
+                ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+            }`}
+          >
+            {selectedLoginCandidate ? `「${selectedLoginCandidate}」でログインする` : "名前を選択してください"}
+          </button>
         </div>
       </div>
     );
   }
 
   // =========================================================================
-  // メイン画面（ログイン後）
+  // メイン画面（すっきり整理された4タブ構成）
   // =========================================================================
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-24 font-sans">
-      {/* Top Header */}
-      <header className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-blue-800 text-white sticky top-0 z-30 shadow-md">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center font-bold text-lg shadow-inner">
+    <div className="min-h-screen bg-slate-100 text-slate-800 pb-24 font-sans">
+      {/* シンプルなヘッダー */}
+      <header className="bg-indigo-900 text-white sticky top-0 z-30 shadow-xs">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm shrink-0">
               W
             </div>
-            <div>
+            <div className="truncate">
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight">WPB 幹部代Sync</h1>
-                <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full font-medium">
-                  {syncStatus === "synced"
-                    ? "🟢 即時同期中"
-                    : syncStatus === "saving"
-                    ? "⚡ 同期送信中..."
-                    : "🟡 ローカル保存"}
+                <h1 className="text-sm sm:text-base font-bold truncate">WPB 幹部代Sync</h1>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full shrink-0">
+                  {syncStatus === "synced" ? "🟢 同期済" : syncStatus === "saving" ? "⚡ 同期中" : "🟡 保存済"}
                 </span>
               </div>
-              <p className="text-[11px] text-indigo-100 hidden sm:block">
-                ログイン中: {currentUser}（{currentMemberObj.roles.join("・")}）
-              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={fetchLatestNow}
-              className="bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border border-white/20 transition"
-              title="最新のクラウドデータを今すぐ取得"
+              className="bg-white/10 hover:bg-white/20 p-2 rounded-xl text-xs transition"
+              title="今すぐ最新データを同期"
             >
-              <RefreshCw size={13} />
-              <span className="hidden sm:inline">今すぐ同期</span>
+              <RefreshCw size={15} />
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("mypage")}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition"
+              onClick={() => setShowRoleTableModal(true)}
+              className="bg-white/10 hover:bg-white/20 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition"
+              title="役職表を見る"
             >
-              <User size={14} />
-              <span>{currentUser}（マイページ）</span>
-            </button>
-            <button
-              type="button"
-              onClick={exportWordDoc}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition"
-              title="Wordファイル(.doc)として保存"
-            >
-              <Download size={13} />
-              <span className="hidden sm:inline">Word保存</span>
+              <Shield size={14} />
+              <span className="hidden sm:inline">役職表</span>
             </button>
             <button
               type="button"
               onClick={handleLogout}
-              className="bg-white/10 hover:bg-red-500/80 text-white p-1.5 rounded-xl text-xs transition"
-              title="ログアウト / ユーザー切替"
+              className="bg-white/10 hover:bg-red-500/80 px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition"
+              title="ユーザー切替・ログアウト"
             >
-              <LogOut size={15} />
+              <User size={14} />
+              <span>{currentUser}</span>
+              <LogOut size={13} className="ml-0.5 opacity-80" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pt-4 space-y-5">
-        {/* 上部クイックタブ切替バー */}
-        <div className="bg-white rounded-2xl p-2 shadow-xs border border-slate-200 flex flex-wrap gap-1.5">
-          {[
-            { id: "mypage", label: `👤 マイページ (${myTodoList.length})` },
-            { id: "all", label: "✨ 全体ボード（すべて表示）" },
-            { id: "tasks", label: `✅ 全体ToDo (${allUncompletedCount})` },
-            { id: "decisions", label: `📋 決定事項 (${totalDecisions})` },
-            { id: "logs", label: "🕒 変更履歴" }
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveTab(t.id)}
-              className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition ${
-                activeTab === t.id
-                  ? "bg-indigo-600 text-white shadow-xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
+      <main className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         {/* =================================================================== */}
-        {/* 0. マイページ（自分の役職・自分の役職＆名前が入ったToDoリスト・自由メモ） */}
+        {/* タブ1: マイページ（自分の役職・自分宛てToDo・自由メモ） */}
         {/* =================================================================== */}
         {activeTab === "mypage" && (
-          <div className="space-y-5">
-            {/* マイプロフィール＆担当役職カード */}
-            <section className="bg-white rounded-3xl p-5 shadow-sm border border-indigo-200 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold text-lg flex items-center justify-center shadow-sm">
-                    {currentUser.slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-slate-900">{currentUser} のマイページ</h2>
-                      <span className="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                        ログイン維持：残り約{Math.max(1, Math.ceil((authInfo.expiresAt - Date.now()) / (1000 * 60 * 60 * 24)))}日
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      あなたの担当役職・自分宛てのToDo・個人自由メモをここでまとめて管理できます
-                    </p>
-                  </div>
+          <div className="space-y-4">
+            {/* コンパクトなマイ役職カード */}
+            <div className="bg-white rounded-3xl p-5 shadow-2xs border border-slate-200 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                    👤 {currentUser} のマイページ
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    担当役職・自分宛てのToDo・個人メモを確認できます
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowRoleTableModal(true)}
-                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                  onClick={() => {
+                    if (!newTaskNames.includes(currentUser)) setNewTaskNames([currentUser]);
+                    setShowAddTaskModal(true);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
                 >
-                  <Shield size={14} />
-                  <span>📋 全体の役職・担当表を見る</span>
+                  <Plus size={16} />
+                  <span>ToDoを追加</span>
                 </button>
               </div>
 
-              <div>
-                <div className="text-xs font-bold text-slate-600 mb-2">
-                  🏷️ あなたの担当役職：
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {currentMemberObj.roles.map((role) => {
-                    const isLead = currentMemberObj.leadRoles.includes(role);
-                    return (
-                      <span
-                        key={role}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 ${
-                          isLead
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-indigo-50 text-indigo-800 border-indigo-200"
-                        }`}
-                      >
-                        <span>{isLead ? "★責任者/代表:" : "担当:"}</span>
-                        <span>{role}</span>
-                      </span>
-                    );
-                  })}
-                </div>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {currentMemberObj.roles.map((role) => {
+                  const isLead = currentMemberObj.leadRoles.includes(role);
+                  return (
+                    <span
+                      key={role}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold border ${
+                        isLead
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-indigo-50 text-indigo-800 border-indigo-200"
+                      }`}
+                    >
+                      {isLead ? `★責任者: ${role}` : `担当: ${role}`}
+                    </span>
+                  );
+                })}
               </div>
-            </section>
+            </div>
 
-            {/* マイページ：自分の役職・名前が入ったToDoリスト */}
-            <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-indigo-600 pb-3">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="text-indigo-600" size={22} />
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-indigo-950">
-                      自分の役職・名前が入ったToDoリスト
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      「{currentUser}」「{currentMemberObj.roles.join("・")}」「幹部代全員」が含まれるToDoが自動表示されます
-                    </p>
-                  </div>
+            {/* マイページ内の切り替えタブ（自分宛てToDo ／ 自由メモ） */}
+            <div className="flex bg-slate-200/80 p-1 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setMyPageSubTab("todo")}
+                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                  myPageSubTab === "todo" ? "bg-white text-indigo-700 shadow-xs" : "text-slate-600"
+                }`}
+              >
+                ✅ 自分宛てのToDo ({myTodoList.length}件)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMyPageSubTab("memo")}
+                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                  myPageSubTab === "memo" ? "bg-white text-amber-700 shadow-xs" : "text-slate-600"
+                }`}
+              >
+                📌 個人の自由メモ ({userMemoList.length}件)
+              </button>
+            </div>
+
+            {myPageSubTab === "todo" ? (
+              <div className="space-y-3">
+                {renderCompactControlBar({
+                  sortMode: todoSortMode,
+                  setSortMode: setTodoSortMode,
+                  onPermanentSort: (mode) => applyPermanentTaskSort(false, mode),
+                  includeWhoSort: false
+                })}
+
+                <div className="space-y-2.5">
+                  {myTodoList.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
+                      現在、あなたの名前・役職宛ての未完了ToDoはありません 🎉
+                    </div>
+                  ) : (
+                    myTodoList.map((t) => renderTaskCard(t))
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">
-                    未完了 {myTodoList.length}件
+
+                {myDoneList.length > 0 && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCompletedInMyPage(!showCompletedInMyPage)}
+                      className="w-full py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      {showCompletedInMyPage
+                        ? "▲ 完了済みの自分宛てToDoを隠す"
+                        : `▼ 完了済みの自分宛てToDoを表示 (${myDoneList.length}件)`}
+                    </button>
+                    {showCompletedInMyPage && (
+                      <div className="space-y-2.5 mt-3">
+                        {myDoneList.map((t) => renderTaskCard(t))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* 自由メモタブ */
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200">
+                  <span className="text-xs font-bold text-slate-600">
+                    引き継ぎ事項や会議で話したいことを自由にメモできます
                   </span>
                   <button
                     type="button"
-                    onClick={() => setShowCompletedInMyPage(!showCompletedInMyPage)}
-                    className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-xl transition"
+                    onClick={() => setShowAddMemoModal(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs shrink-0 transition"
                   >
-                    {showCompletedInMyPage ? "完了済みを隠す" : `完了済みも表示 (${myDoneList.length}件)`}
+                    ＋ メモを追加
                   </button>
                 </div>
-              </div>
 
-              {/* マイページ内の並び替えバー（追加順 昇順・降順 対応） */}
-              {renderSortToolbar(
-                todoSortMode,
-                setTodoSortMode,
-                (mode) => applyPermanentTaskSort(false, mode),
-                true
-              )}
-
-              <div className="space-y-2.5">
-                {myTodoList.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    現在、あなたの名前・役職宛ての未完了ToDoはありません 🎉
-                  </div>
-                ) : (
-                  myTodoList.map((t) => renderTaskCard(t))
-                )}
-              </div>
-
-              {showCompletedInMyPage && myDoneList.length > 0 && (
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <div className="text-xs font-bold text-emerald-800">
-                    ✓ 完了済みの自分宛てToDo ({myDoneList.length}件)
-                  </div>
-                  {myDoneList.map((t) => renderTaskCard(t))}
-                </div>
-              )}
-            </section>
-
-            {/* マイページ：自由メモ */}
-            <section className="bg-white rounded-3xl p-5 shadow-sm border border-amber-200 space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-amber-500 pb-3">
-                <div className="flex items-center gap-2">
-                  <StickyNote className="text-amber-600" size={22} />
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                      マイページ自由メモ（{currentUser} 専用メモ帳）
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      自分の役職の引き継ぎメモや会議で話したいことなどを自由に書き留められます
-                    </p>
-                  </div>
-                </div>
-                <span className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">
-                  {userMemoList.length}件
-                </span>
-              </div>
-
-              <div className="bg-amber-50/50 border border-dashed border-amber-300 rounded-2xl p-3.5 space-y-2.5">
-                <input
-                  type="text"
-                  value={newMemoTitle}
-                  onChange={(e) => setNewMemoTitle(e.target.value)}
-                  placeholder="メモのタイトル（例：PA卓の引き継ぎ事項 / 次回会議で聞くこと）"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold"
-                />
-                <textarea
-                  rows={3}
-                  value={newMemoBody}
-                  onChange={(e) => setNewMemoBody(e.target.value)}
-                  placeholder="自由にメモを入力してください..."
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
-                />
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleAddMemo}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition"
-                  >
-                    ＋ 自由メモを追加
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2.5">
                 {userMemoList.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-xs">
-                    まだ自由メモがありません。上の入力欄から追加できます。
+                  <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
+                    まだ自由メモがありません。「＋ メモを追加」から作成できます。
                   </div>
                 ) : (
                   userMemoList.map((memo) => (
-                    <div
-                      key={memo.id}
-                      className="bg-amber-50/30 border border-amber-200 rounded-2xl p-3.5 space-y-1.5"
-                    >
+                    <div key={memo.id} className="bg-white border border-amber-200 rounded-2xl p-4 space-y-2 shadow-2xs">
                       {editingMemoId === memo.id ? (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           <input
                             type="text"
                             value={editMemoForm.title}
                             onChange={(e) => setEditMemoForm({ ...editMemoForm, title: e.target.value })}
-                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold"
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold"
                           />
                           <textarea
-                            rows={3}
+                            rows={4}
                             value={editMemoForm.body}
                             onChange={(e) => setEditMemoForm({ ...editMemoForm, body: e.target.value })}
-                            className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs"
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
                           />
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => setEditingMemoId(null)}
-                              className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
+                              className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
                             >
                               取消
                             </button>
                             <button
                               type="button"
                               onClick={() => saveEditMemo(memo.id)}
-                              className="px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-bold"
+                              className="px-4 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold"
                             >
                               💾 保存
                             </button>
@@ -2436,31 +1999,31 @@ export default function App() {
                           <div className="flex items-center justify-between gap-2">
                             <h4
                               onClick={() => startEditMemo(memo)}
-                              className="font-bold text-xs sm:text-sm text-slate-900 cursor-pointer hover:underline"
+                              className="font-bold text-sm text-slate-900 cursor-pointer hover:underline"
                             >
                               📌 {memo.title}
                             </h4>
                             <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-slate-400 mr-1">{memo.updatedAt}</span>
+                              <span className="text-[11px] text-slate-400 mr-1">{memo.updatedAt}</span>
                               <button
                                 type="button"
                                 onClick={() => startEditMemo(memo)}
-                                className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg"
                               >
-                                <Edit2 size={13} />
+                                <Edit2 size={14} />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => deleteMemo(memo.id, memo.title)}
-                                className="p-1 text-slate-400 hover:text-red-600 rounded"
+                                className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
                           <p
                             onClick={() => startEditMemo(memo)}
-                            className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed cursor-pointer"
+                            className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed cursor-pointer"
                           >
                             {memo.body}
                           </p>
@@ -2470,635 +2033,388 @@ export default function App() {
                   ))
                 )}
               </div>
-            </section>
-          </div>
-        )}
-
-        {/* 進捗サマリーバー ＆ 検索・担当者・重要度フィルター */}
-        {activeTab !== "mypage" && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  やるべきこと (未完了): {allUncompletedCount}件
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  すでに終わっていること (完了): {allCompletedCount}件
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  今まで決まったこと: {totalDecisions}件
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                <span>ToDo消化率: {progressPercent}%</span>
-                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-              <div className="relative flex-1 min-w-[180px]">
-                <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="キーワード検索（例：マーシャル、2月ライブ、溝上...）"
-                  className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <select
-                value={filterWho}
-                onChange={(e) => setFilterWho(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700"
-              >
-                <option value="ALL">👤 担当者・役職：すべて表示</option>
-                <option value="全員">幹部代全員</option>
-                {KANBU_ROSTER.map((m) => (
-                  <option key={m.name} value={m.name}>
-                    {m.name}（{m.roles[0]}）
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filterImportance}
-                onChange={(e) => setFilterImportance(e.target.value)}
-                className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-900"
-              >
-                <option value="ALL">★ 重要度：すべて表示</option>
-                <option value="5">★5（最優先）のみ</option>
-                <option value="4_UP">★4以上（高〜最優先）</option>
-                <option value="3_UP">★3以上（中〜最優先）</option>
-                <option value="HAS_IMP">★重要度あり（★1〜★5）</option>
-                <option value="NONE">重要度なしのみ</option>
-              </select>
-              {(searchQuery || filterWho !== "ALL" || filterImportance !== "ALL") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setFilterWho("ALL");
-                    setFilterImportance("ALL");
-                  }}
-                  className="text-xs text-indigo-600 font-bold px-2 py-1 hover:underline"
-                >
-                  解除
-                </button>
-              )}
-            </div>
+            )}
           </div>
         )}
 
         {/* =================================================================== */}
-        {/* 1. これから誰がいつまでに何をやるか（やるべきことリスト / ToDo） */}
+        {/* タブ2: 全体ToDo（やるべきこと ／ 完了済み をすっきり切り替え） */}
         {/* =================================================================== */}
-        {(activeTab === "all" || activeTab === "tasks" || activeTab === "mypage") && (
-          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between border-b-2 border-blue-600 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <CheckSquare className="text-blue-600" size={22} />
-                <h2 className="text-base sm:text-lg font-bold text-blue-900">
-                  1. これから誰がいつまでに何をやるか（やるべきことリスト / ToDo追加）
+        {activeTab === "tasks" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  ✅ 全体のToDo・完了済みリスト
                 </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  未完了 {allUncompletedCount}件 ／ 完了済み {allCompletedCount}件
+                </p>
               </div>
-              <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">
-                残り {todoList.length}件
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowAddTaskModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-2xl shadow-xs flex items-center gap-1.5 transition"
+              >
+                <Plus size={16} />
+                <span>新しいToDoを追加</span>
+              </button>
             </div>
 
-            {/* 新規ToDo追加パネル */}
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 mb-5 space-y-3.5">
-              <div className="text-xs font-bold text-indigo-950 flex items-center justify-between flex-wrap gap-2">
-                <span className="flex items-center gap-1.5">
-                  <Plus size={15} className="text-indigo-600" />
-                  <span>新しいチェックリスト（やるべきこと / 完了済み）を追加</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newTaskNames.includes(currentUser)) {
-                      setNewTaskNames([...newTaskNames, currentUser]);
-                    }
-                  }}
-                  className="text-[11px] bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg font-bold hover:bg-indigo-200 transition"
-                >
-                  ＋ 自分の名前（{currentUser}）を選択に入れる
-                </button>
-              </div>
-
-              <WhoSelector
-                selectedNames={newTaskNames}
-                setSelectedNames={setNewTaskNames}
-                selectedRoles={newTaskRoles}
-                setSelectedRoles={setNewTaskRoles}
-                freeText={newTaskWhoFree}
-                setFreeText={setNewTaskWhoFree}
-              />
-
-              <WhenSelector
-                selectedDates={newTaskDates}
-                setSelectedDates={setNewTaskDates}
-                freeText={newTaskWhenFree}
-                setFreeText={setNewTaskWhenFree}
-              />
-
-              <ImportanceSelector
-                value={newTaskImportance}
-                onChange={setNewTaskImportance}
-                label="重要度を設定（1〜5 / 設定なしもOK）"
-              />
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  📝 何をやるか（具体的なタスク内容）
-                </label>
-                <textarea
-                  rows={2}
-                  value={newTaskWhat}
-                  onChange={(e) => setNewTaskWhat(e.target.value)}
-                  placeholder="具体的なタスク内容を入力してください"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddTask(false)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-sm transition"
-                >
-                  ＋ やるべきこと（ToDo）に追加
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddTask(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-sm transition"
-                >
-                  ＋ 完了済みに直接追加
-                </button>
-              </div>
+            {/* 未完了 / 完了済み の切り替えタブ */}
+            <div className="flex bg-slate-200/80 p-1 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setTaskSubTab("todo")}
+                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                  taskSubTab === "todo" ? "bg-white text-blue-700 shadow-xs" : "text-slate-600"
+                }`}
+              >
+                🔥 やるべきこと ({todoList.length}件)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskSubTab("done")}
+                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                  taskSubTab === "done" ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600"
+                }`}
+              >
+                ✓ すでに終わっていること ({doneList.length}件)
+              </button>
             </div>
 
-            {activeTab !== "mypage" && (
-              <>
-                {renderSortToolbar(
-                  todoSortMode,
-                  setTodoSortMode,
-                  (mode) => applyPermanentTaskSort(false, mode),
-                  true
-                )}
+            {taskSubTab === "todo" ? (
+              <div className="space-y-3">
+                {renderCompactControlBar({
+                  sortMode: todoSortMode,
+                  setSortMode: setTodoSortMode,
+                  onPermanentSort: (mode) => applyPermanentTaskSort(false, mode),
+                  includeWhoSort: true
+                })}
                 <div className="space-y-2.5">
                   {todoList.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      該当する未完了タスクはありません 🎉
+                    <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
+                      該当する未完了のToDoはありません 🎉
                     </div>
                   ) : (
                     todoList.map((t) => renderTaskCard(t))
                   )}
                 </div>
-              </>
-            )}
-          </section>
-        )}
-
-        {/* =================================================================== */}
-        {/* 2. すでに終わっているはずのこと（完了済みリスト / 並び替え対応） */}
-        {/* =================================================================== */}
-        {(activeTab === "all" || activeTab === "tasks") && (
-          <section className="bg-white rounded-3xl p-5 shadow-sm border border-emerald-200">
-            <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-600" size={22} />
-                <h2 className="text-base sm:text-lg font-bold text-emerald-900">
-                  2. すでに終わっているはずのこと（完了済みリスト）
-                </h2>
               </div>
-              <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full">
-                完了 {doneList.length}件
-              </span>
-            </div>
-
-            {/* 完了済みリスト用の並び替えバー（追加順 昇順・降順 対応） */}
-            {renderSortToolbar(
-              doneSortMode,
-              setDoneSortMode,
-              (mode) => applyPermanentTaskSort(true, mode),
-              true
+            ) : (
+              <div className="space-y-3">
+                {renderCompactControlBar({
+                  sortMode: doneSortMode,
+                  setSortMode: setDoneSortMode,
+                  onPermanentSort: (mode) => applyPermanentTaskSort(true, mode),
+                  includeWhoSort: true
+                })}
+                <div className="space-y-2.5">
+                  {doneList.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
+                      完了済みのタスクはありません
+                    </div>
+                  ) : (
+                    doneList.map((t) => renderTaskCard(t))
+                  )}
+                </div>
+              </div>
             )}
-
-            <div className="space-y-2">
-              {doneList.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 text-xs">完了済みのタスクはありません</div>
-              ) : (
-                doneList.map((t) => renderTaskCard(t))
-              )}
-            </div>
-          </section>
+          </div>
         )}
 
         {/* =================================================================== */}
-        {/* 3. 今まで決まったこと（重要度設定 ＆ 追加順［昇順・降順］並び替え対応） */}
+        {/* タブ3: 今まで決まったこと（カテゴリ開閉式ですっきり見やすく） */}
         {/* =================================================================== */}
-        {(activeTab === "all" || activeTab === "decisions") && (
-          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-indigo-900 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <FileText className="text-indigo-900" size={22} />
-                <h2 className="text-base sm:text-lg font-bold text-indigo-950">
-                  3. 今まで決まったこと（重要度設定・並び替え・選択肢追加対応）
+        {activeTab === "decisions" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  📋 今まで決まったこと（全{totalDecisions}件）
                 </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  見出しをタップして開閉できます。重要度設定や並び替えにも対応
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedCatId(NEW_CAT_VALUE);
-                  setShowCustomCatBox(true);
-                }}
-                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition"
+                onClick={() => setShowAddDecisionModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-2xl shadow-xs flex items-center gap-1.5 transition"
               >
-                <FolderPlus size={14} />
-                <span>＋ 新しい選択肢（会議名・見出し）を作成</span>
+                <Plus size={16} />
+                <span>決定事項・見出しを追加</span>
               </button>
             </div>
 
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4 mb-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Sparkles size={15} className="text-indigo-600" />
-                  <span>「今まで決まったこと」に新しい決定事項を追加入力</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCatId(NEW_CAT_VALUE);
-                    setShowCustomCatBox(true);
-                  }}
-                  className="text-xs text-indigo-600 font-bold hover:underline"
-                >
-                  ✏️ 選択肢にない新しい会議名・テーマを自分で追加する
-                </button>
-              </div>
+            {renderCompactControlBar({
+              sortMode: decisionSortMode,
+              setSortMode: setDecisionSortMode,
+              onPermanentSort: (mode) => applyPermanentDecisionSort(mode),
+              includeWhoSort: false
+            })}
 
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-start">
-                <div className="sm:col-span-4 space-y-2">
-                  <select
-                    value={selectedCatId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSelectedCatId(val);
-                      setShowCustomCatBox(val === NEW_CAT_VALUE);
-                    }}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
-                  >
-                    {boardState.decisions.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.category}
-                      </option>
-                    ))}
-                    <option value={NEW_CAT_VALUE}>
-                      ➕ 新しい選択肢（会議名・テーマ）を自分で入力する...
-                    </option>
-                  </select>
-
-                  {showCustomCatBox && (
-                    <div className="p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl space-y-2">
-                      <label className="block text-[11px] font-bold text-indigo-900">
-                        ✨ 新しく追加する選択肢（会議名・テーマ名）：
-                      </label>
-                      <input
-                        type="text"
-                        value={newCustomCatName}
-                        onChange={(e) => setNewCustomCatName(e.target.value)}
-                        placeholder="例：11/18 第2回幹部代会議 / 合宿について"
-                        className="w-full px-2.5 py-1.5 bg-white border border-indigo-300 rounded-lg text-xs"
-                      />
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={handleRegisterCategoryOnly}
-                          className="flex-1 bg-indigo-600 text-white text-[11px] font-bold py-1.5 px-2 rounded-lg"
-                        >
-                          選択肢だけ先に登録
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCustomCatBox(false);
-                            if (boardState.decisions.length > 0) {
-                              setSelectedCatId(boardState.decisions[0].id);
-                            }
-                          }}
-                          className="bg-white text-slate-600 border border-slate-300 text-[11px] py-1.5 px-2 rounded-lg"
-                        >
-                          閉じる
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <input
-                  type="text"
-                  value={newDecTitle}
-                  onChange={(e) => setNewDecTitle(e.target.value)}
-                  placeholder="項目名（例：2月ライブの個人バンド上限）"
-                  className="sm:col-span-3 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
-                />
-
-                <input
-                  type="text"
-                  value={newDecContent}
-                  onChange={(e) => setNewDecContent(e.target.value)}
-                  placeholder="決まった内容（例：3回生以下は最大3バンドまでに決定）"
-                  className="sm:col-span-5 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
-                <ImportanceSelector
-                  value={newDecImportance}
-                  onChange={setNewDecImportance}
-                  label="決定事項の重要度（1〜5 / 設定なしもOK）"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddDecision}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-sm transition"
-                >
-                  ＋ 決定事項を追加
-                </button>
-              </div>
+            {/* 全カテゴリの開閉一括ボタン */}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCollapsedCats({})}
+                className="text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-50"
+              >
+                すべて開く
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = {};
+                  boardState.decisions.forEach((c) => { next[c.id] = true; });
+                  setCollapsedCats(next);
+                }}
+                className="text-xs font-bold text-slate-600 bg-white border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-50"
+              >
+                すべて折りたたむ
+              </button>
             </div>
 
-            {/* 決定事項の並び替えコントロールバー（追加順 昇順・降順 対応） */}
-            {renderSortToolbar(
-              decisionSortMode,
-              setDecisionSortMode,
-              (mode) => applyPermanentDecisionSort(mode),
-              false
-            )}
-
-            <div className="space-y-4">
+            <div className="space-y-3">
               {boardState.decisions.map((cat) => {
                 const q = searchQuery.trim().toLowerCase();
                 let visibleItems = cat.items.filter((it) => {
                   const matchImp = matchImportanceFilter(it.importance);
-                  const matchQ =
-                    !q ||
-                    it.title.toLowerCase().includes(q) ||
-                    it.content.toLowerCase().includes(q) ||
-                    cat.category.toLowerCase().includes(q);
+                  const matchQ = !q || it.title.toLowerCase().includes(q) || it.content.toLowerCase().includes(q) || cat.category.toLowerCase().includes(q);
                   return matchImp && matchQ;
                 });
 
                 if (decisionSortMode !== "manual") {
-                  visibleItems = [...visibleItems].sort((a, b) =>
-                    compareItems(a, b, decisionSortMode)
-                  );
+                  visibleItems = [...visibleItems].sort((a, b) => compareItems(a, b, decisionSortMode));
                 }
 
+                const isCollapsed = Boolean(collapsedCats[cat.id]) && !hasActiveFilter;
+
                 return (
-                  <div
-                    key={cat.id}
-                    className="border border-slate-200 rounded-2xl p-4 bg-white shadow-2xs"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 mb-3">
-                      <h3
-                        onClick={() => editCategoryName(cat.id, cat.category)}
-                        className="text-sm sm:text-base font-bold text-indigo-800 cursor-pointer hover:underline"
-                      >
-                        {cat.category}
-                      </h3>
-                      <div className="flex items-center gap-1">
+                  <div key={cat.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xs">
+                    {/* アコーディオンヘッダー */}
+                    <div
+                      onClick={() => setCollapsedCats({ ...collapsedCats, [cat.id]: !collapsedCats[cat.id] })}
+                      className="p-4 bg-slate-50/70 hover:bg-slate-100/70 cursor-pointer flex items-center justify-between gap-2 transition"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isCollapsed ? (
+                          <ChevronRight size={18} className="text-indigo-600 shrink-0" />
+                        ) : (
+                          <ChevronDown size={18} className="text-indigo-600 shrink-0" />
+                        )}
+                        <h3 className="text-sm sm:text-base font-bold text-indigo-950 truncate">
+                          {cat.category}
+                        </h3>
+                        <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
+                          {visibleItems.length}件
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => moveCategory(cat.id, -1)}
-                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                          title="このカテゴリ見出しを上へ移動"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg"
+                          title="見出しを上へ移動"
                         >
                           <ArrowUp size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => moveCategory(cat.id, 1)}
-                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                          title="このカテゴリ見出しを下へ移動"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg"
+                          title="見出しを下へ移動"
                         >
                           <ArrowDown size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => editCategoryName(cat.id, cat.category)}
-                          className="text-[11px] text-slate-500 hover:text-indigo-600 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 font-medium"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg"
+                          title="見出し名を編集"
                         >
-                          ✏️ 見出し編集
+                          <Edit2 size={14} />
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteCategory(cat.id, cat.category)}
-                          className="text-[11px] text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg"
+                          title="カテゴリを削除"
                         >
-                          🗑️
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
 
-                    <ul className="space-y-2">
-                      {visibleItems.length === 0 ? (
-                        <li className="text-xs text-slate-400 py-2">
-                          （該当する決定事項がありません）
-                        </li>
-                      ) : (
-                        visibleItems.map((item) => {
-                          const imp = Number(item.importance) || 0;
-                          return (
-                            <li
-                              key={item.id}
-                              className={`flex items-start justify-between gap-2 p-2.5 rounded-xl border transition ${
-                                imp === 5
-                                  ? "bg-rose-50/30 border-rose-200"
-                                  : imp === 4
-                                  ? "bg-orange-50/20 border-orange-200"
-                                  : "hover:bg-slate-50 border-slate-100"
-                              }`}
-                            >
-                              {editingDecId === item.id ? (
-                                <div className="flex-1 space-y-2.5 bg-slate-50 p-3 rounded-xl border border-indigo-200">
-                                  <input
-                                    type="text"
-                                    value={editDecForm.title}
-                                    onChange={(e) =>
-                                      setEditDecForm({ ...editDecForm, title: e.target.value })
-                                    }
-                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold"
-                                    placeholder="項目名"
-                                  />
-                                  <ImportanceSelector
-                                    value={editDecForm.importance}
-                                    onChange={(val) =>
-                                      setEditDecForm({ ...editDecForm, importance: val })
-                                    }
-                                    label="重要度（1〜5 / なし）"
-                                  />
-                                  <textarea
-                                    rows={2}
-                                    value={editDecForm.content}
-                                    onChange={(e) =>
-                                      setEditDecForm({ ...editDecForm, content: e.target.value })
-                                    }
-                                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                                    placeholder="決まった内容"
-                                  />
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingDecId(null)}
-                                      className="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
-                                    >
-                                      取消
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => saveEditDecision(cat.id, item.id)}
-                                      className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold"
-                                    >
-                                      💾 編集完了（保存）
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div
-                                    onClick={() => startEditDecision(item)}
-                                    className="flex-1 text-xs sm:text-sm leading-relaxed cursor-pointer"
-                                  >
-                                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                      <ImportanceBadge importance={item.importance} />
-                                      <span className="font-bold text-slate-900">
-                                        {item.title}：
-                                      </span>
-                                    </div>
-                                    <span className="text-slate-700 whitespace-pre-wrap">
-                                      {item.content}
+                    {/* カテゴリ内の項目リスト */}
+                    {!isCollapsed && (
+                      <div className="p-4 space-y-2.5 border-t border-slate-100">
+                        {visibleItems.length === 0 ? (
+                          <div className="text-xs text-slate-400 py-3 text-center">
+                            該当する決定事項がありません
+                          </div>
+                        ) : (
+                          visibleItems.map((item) => {
+                            const imp = Number(item.importance) || 0;
+                            return (
+                              <div
+                                key={item.id}
+                                className={`p-3.5 rounded-2xl border transition flex items-start justify-between gap-3 ${
+                                  imp === 5
+                                    ? "bg-rose-50/30 border-rose-200"
+                                    : imp === 4
+                                    ? "bg-orange-50/20 border-orange-200"
+                                    : "bg-white hover:bg-slate-50 border-slate-150"
+                                }`}
+                              >
+                                <div
+                                  onClick={() => startEditDecision(cat.id, item)}
+                                  className="flex-1 min-w-0 cursor-pointer space-y-1"
+                                >
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <ImportanceBadge importance={item.importance} />
+                                    <span className="font-bold text-sm text-slate-900">
+                                      {item.title}
                                     </span>
-                                    {item.updatedBy && (
-                                      <span className="ml-2 text-[10px] text-slate-400">
-                                        (更新: {item.updatedBy} {item.updatedAt})
-                                      </span>
-                                    )}
                                   </div>
-                                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => moveDecisionItem(cat.id, item.id, -1)}
-                                      className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded"
-                                      title="上へ移動"
-                                    >
-                                      <ArrowUp size={13} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => moveDecisionItem(cat.id, item.id, 1)}
-                                      className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded"
-                                      title="下へ移動"
-                                    >
-                                      <ArrowDown size={13} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => startEditDecision(item)}
-                                      className="p-1 text-slate-400 hover:text-indigo-600 rounded"
-                                      title="編集"
-                                    >
-                                      <Edit2 size={13} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteDecision(cat.id, item.id, item.title)}
-                                      className="p-1 text-slate-400 hover:text-red-600 rounded"
-                                      title="削除"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
+                                  <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                                    {item.content}
+                                  </p>
+                                  {item.updatedBy && (
+                                    <div className="text-[10px] text-slate-400">
+                                      更新: {item.updatedBy} ({item.updatedAt})
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveDecisionItem(cat.id, item.id, -1)}
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                    title="上へ移動"
+                                  >
+                                    <ArrowUp size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveDecisionItem(cat.id, item.id, 1)}
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                    title="下へ移動"
+                                  >
+                                    <ArrowDown size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditDecision(cat.id, item)}
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                    title="編集"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteDecision(cat.id, item.id, item.title)}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                    title="削除"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </section>
+          </div>
         )}
 
         {/* =================================================================== */}
-        {/* 4. リアルタイム変更履歴（更新ログ） */}
+        {/* タブ4: 履歴・出力・設定 */}
         {/* =================================================================== */}
-        {(activeTab === "all" || activeTab === "logs") && (
-          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <History className="text-indigo-600" size={20} />
-                <h2 className="text-sm sm:text-base font-bold text-slate-800">
-                  みんなの編集・変更履歴（誰がいつ何を変更したか）
-                </h2>
+        {activeTab === "logs" && (
+          <div className="space-y-4">
+            {/* 便利ツールカード */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
+              <h2 className="text-base font-bold text-slate-900">⚙️ 出力・役職表・データ管理</h2>
+              <div className="flex flex-wrap gap-2.5">
+                <button
+                  type="button"
+                  onClick={exportWordDoc}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
+                >
+                  <Download size={15} />
+                  <span>Wordファイル (.doc) に保存</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRoleTableModal(true)}
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition"
+                >
+                  <Shield size={15} />
+                  <span>全体の役職・担当表を見る</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    requestConfirm({
+                      title: "初期状態へのリセット確認",
+                      message: "本当にすべてのToDo・決定事項データを初期状態にリセットしますか？",
+                      confirmLabel: "リセットする",
+                      confirmColor: "bg-red-600 hover:bg-red-700",
+                      onConfirm: () => commitState(INITIAL_STATE, "データを初期状態にリセットしました")
+                    });
+                  }}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition ml-auto"
+                >
+                  <RotateCcw size={14} />
+                  <span>初期状態に戻す</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  requestConfirm({
-                    title: "初期状態へのリセット確認",
-                    message: "本当にすべてのToDo・決定事項データを初期状態にリセットしますか？",
-                    confirmLabel: "リセットする",
-                    confirmColor: "bg-red-600 hover:bg-red-700",
-                    onConfirm: () => {
-                      commitState(INITIAL_STATE, "データを初期状態にリセットしました");
-                    }
-                  });
-                }}
-                className="text-[11px] text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg border border-red-200 flex items-center gap-1 font-bold"
-              >
-                <RotateCcw size={12} />
-                <span>初期状態に戻す</span>
-              </button>
             </div>
 
-            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-              {(boardState.logs || []).map((log) => (
-                <div
-                  key={log.id}
-                  className="text-xs flex items-center justify-between gap-2 py-1.5 px-3 rounded-xl bg-slate-50 border border-slate-100"
-                >
-                  <div>
-                    <span className="font-bold text-indigo-700 mr-1.5">[{log.user}]</span>
-                    <span className="text-slate-700">{log.action}</span>
+            {/* 変更履歴リスト */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <History className="text-indigo-600" size={20} />
+                <h3 className="text-base font-bold text-slate-900">みんなの編集・変更履歴</h3>
+              </div>
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {(boardState.logs || []).map((log) => (
+                  <div
+                    key={log.id}
+                    className="text-xs flex items-center justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-slate-50 border border-slate-100"
+                  >
+                    <div>
+                      <span className="font-bold text-indigo-700 mr-1.5">[{log.user}]</span>
+                      <span className="text-slate-700">{log.action}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 shrink-0 font-mono">{log.time}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 shrink-0 font-mono">{log.time}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </section>
+          </div>
         )}
       </main>
 
-      {/* Bottom Navigation */}
+      {/* =================================================================== */}
+      {/* 下部ナビゲーションバー（シンプルな4タブ） */}
+      {/* =================================================================== */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg">
         <div className="max-w-lg mx-auto flex">
           {[
-            { id: "mypage", label: `マイページ(${myTodoList.length})`, icon: User },
-            { id: "all", label: "全体ボード", icon: Sparkles },
-            { id: "tasks", label: `ToDo(${allUncompletedCount})`, icon: CheckSquare },
-            { id: "decisions", label: `決定事項(${totalDecisions})`, icon: FileText },
-            { id: "logs", label: "変更履歴", icon: History }
+            { id: "mypage", label: `マイページ (${myTodoList.length})`, icon: User },
+            { id: "tasks", label: `全体ToDo (${allUncompletedCount})`, icon: CheckSquare },
+            { id: "decisions", label: `決定事項 (${totalDecisions})`, icon: FileText },
+            { id: "logs", label: "履歴・出力", icon: History }
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -3107,11 +2423,11 @@ export default function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-2.5 flex flex-col items-center justify-center gap-0.5 text-[10px] sm:text-[11px] font-bold transition ${
+                className={`flex-1 py-3 flex flex-col items-center justify-center gap-1 text-xs font-bold transition ${
                   active ? "text-indigo-600" : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={20} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -3119,7 +2435,380 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 役職一覧表モーダル */}
+      {/* =================================================================== */}
+      {/* モーダル1: 新規ToDo追加ウィンドウ */}
+      {/* =================================================================== */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">＋ 新しいToDoを追加</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddTaskModal(false)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newTaskNames.includes(currentUser)) setNewTaskNames([...newTaskNames, currentUser]);
+                }}
+                className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-xl font-bold"
+              >
+                ＋ 自分の名前（{currentUser}）を入れる
+              </button>
+            </div>
+
+            <WhoSelector
+              selectedNames={newTaskNames}
+              setSelectedNames={setNewTaskNames}
+              selectedRoles={newTaskRoles}
+              setSelectedRoles={setNewTaskRoles}
+              freeText={newTaskWhoFree}
+              setFreeText={setNewTaskWhoFree}
+            />
+
+            <WhenSelector
+              selectedDates={newTaskDates}
+              setSelectedDates={setNewTaskDates}
+              freeText={newTaskWhenFree}
+              setFreeText={setNewTaskWhenFree}
+            />
+
+            <ImportanceSelector
+              value={newTaskImportance}
+              onChange={setNewTaskImportance}
+              label="重要度（1〜5 / 設定なしもOK）"
+            />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📝 何をやるか（内容）</label>
+              <textarea
+                rows={3}
+                value={newTaskWhat}
+                onChange={(e) => setNewTaskWhat(e.target.value)}
+                placeholder="具体的なタスク内容を入力してください"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAddTaskModal(false)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddTask(true)}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+              >
+                ＋ 完了済みに追加
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddTask(false)}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                ＋ やるべきこと（ToDo）に追加
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル2: ToDo編集ウィンドウ */}
+      {/* =================================================================== */}
+      {editingTaskId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">✏️ ToDo内容を編集</h3>
+              <button
+                type="button"
+                onClick={() => setEditingTaskId(null)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <WhoSelector
+              selectedNames={editTaskNames}
+              setSelectedNames={setEditTaskNames}
+              selectedRoles={editTaskRoles}
+              setSelectedRoles={setEditTaskRoles}
+              freeText={editTaskWhoFree}
+              setFreeText={setEditTaskWhoFree}
+            />
+
+            <WhenSelector
+              selectedDates={editTaskDates}
+              setSelectedDates={setEditTaskDates}
+              freeText={editTaskWhenFree}
+              setFreeText={setEditTaskWhenFree}
+            />
+
+            <ImportanceSelector
+              value={editTaskImportance}
+              onChange={setEditTaskImportance}
+              label="重要度（1〜5 / なし）"
+            />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📝 何をやるか（内容）</label>
+              <textarea
+                rows={4}
+                value={editTaskWhat}
+                onChange={(e) => setEditTaskWhat(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs bg-white"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingTaskId(null)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={saveEditTask}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                💾 編集完了（保存）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル3: 決定事項・見出し追加ウィンドウ */}
+      {/* =================================================================== */}
+      {showAddDecisionModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">＋ 決定事項・新しい見出しを追加</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddDecisionModal(false)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700">📂 カテゴリ（会議名・テーマ）</label>
+              <select
+                value={selectedCatId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedCatId(val);
+                  setShowCustomCatBox(val === NEW_CAT_VALUE);
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
+              >
+                {boardState.decisions.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.category}</option>
+                ))}
+                <option value={NEW_CAT_VALUE}>➕ 新しい見出し（会議名・テーマ）を作成する...</option>
+              </select>
+
+              {showCustomCatBox && (
+                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl space-y-2">
+                  <label className="block text-xs font-bold text-indigo-900">
+                    ✨ 新しく作成する見出し名：
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustomCatName}
+                    onChange={(e) => setNewCustomCatName(e.target.value)}
+                    placeholder="例：11/18 第2回幹部代会議 / 合宿について"
+                    className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl text-xs"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📌 項目名（タイトル）</label>
+              <input
+                type="text"
+                value={newDecTitle}
+                onChange={(e) => setNewDecTitle(e.target.value)}
+                placeholder="例：2月ライブの個人バンド上限（※見出しだけ作る場合は空欄でOK）"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+
+            <ImportanceSelector
+              value={newDecImportance}
+              onChange={setNewDecImportance}
+              label="重要度（1〜5 / 設定なしもOK）"
+            />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📝 決まった内容</label>
+              <textarea
+                rows={3}
+                value={newDecContent}
+                onChange={(e) => setNewDecContent(e.target.value)}
+                placeholder="例：3回生以下は最大3バンドまでに決定"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAddDecisionModal(false)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleAddDecision}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                ＋ 追加する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル4: 決定事項の編集ウィンドウ */}
+      {/* =================================================================== */}
+      {editingDec && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">✏️ 決定事項を編集</h3>
+              <button
+                type="button"
+                onClick={() => setEditingDec(null)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📌 項目名</label>
+              <input
+                type="text"
+                value={editingDec.title}
+                onChange={(e) => setEditingDec({ ...editingDec, title: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold"
+              />
+            </div>
+
+            <ImportanceSelector
+              value={editingDec.importance}
+              onChange={(val) => setEditingDec({ ...editingDec, importance: val })}
+              label="重要度（1〜5 / なし）"
+            />
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">📝 決まった内容</label>
+              <textarea
+                rows={4}
+                value={editingDec.content}
+                onChange={(e) => setEditingDec({ ...editingDec, content: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingDec(null)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={saveEditDecision}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                💾 編集完了（保存）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル5: マイページ自由メモ追加ウィンドウ */}
+      {/* =================================================================== */}
+      {showAddMemoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">＋ 自由メモを追加</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddMemoModal(false)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={newMemoTitle}
+              onChange={(e) => setNewMemoTitle(e.target.value)}
+              placeholder="タイトル（例：PA卓の引き継ぎ事項 / 次回会議で聞くこと）"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold"
+            />
+            <textarea
+              rows={4}
+              value={newMemoBody}
+              onChange={(e) => setNewMemoBody(e.target.value)}
+              placeholder="メモの内容を自由に入力してください..."
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddMemoModal(false)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleAddMemo}
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                ＋ 追加する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル6: 写真の役職一覧表 */}
+      {/* =================================================================== */}
       {showRoleTableModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
@@ -3139,19 +2828,19 @@ export default function App() {
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="bg-indigo-900 text-white">
-                    <th className="p-2 border border-slate-300 text-left">区分</th>
-                    <th className="p-2 border border-slate-300 text-left">役職</th>
-                    <th className="p-2 border border-slate-300 text-left">幹部代担当（★＝赤字責任者）</th>
-                    <th className="p-2 border border-slate-300 text-left">他メンバー・備考</th>
+                    <th className="p-2.5 border border-slate-300 text-left">区分</th>
+                    <th className="p-2.5 border border-slate-300 text-left">役職</th>
+                    <th className="p-2.5 border border-slate-300 text-left">幹部代担当（★＝責任者）</th>
+                    <th className="p-2.5 border border-slate-300 text-left">他メンバー・備考</th>
                   </tr>
                 </thead>
                 <tbody>
                   {FULL_ROLE_TABLE.map((row, i) => (
                     <tr key={i} className="odd:bg-white even:bg-slate-50">
-                      <td className="p-2 border border-slate-200 font-bold text-slate-600">{row.cat}</td>
-                      <td className="p-2 border border-slate-200 font-bold text-indigo-900">{row.role}</td>
-                      <td className="p-2 border border-slate-200 font-bold text-slate-800">{row.main}</td>
-                      <td className="p-2 border border-slate-200 text-slate-600">{row.sub}</td>
+                      <td className="p-2.5 border border-slate-200 font-bold text-slate-600">{row.cat}</td>
+                      <td className="p-2.5 border border-slate-200 font-bold text-indigo-900">{row.role}</td>
+                      <td className="p-2.5 border border-slate-200 font-bold text-slate-800">{row.main}</td>
+                      <td className="p-2.5 border border-slate-200 text-slate-600">{row.sub}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -3161,7 +2850,9 @@ export default function App() {
         </div>
       )}
 
-      {/* ワンクッション確認モーダル */}
+      {/* =================================================================== */}
+      {/* ワンクッション確認ダイアログ */}
+      {/* =================================================================== */}
       {confirmDialog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -3176,7 +2867,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
               >
                 キャンセル
               </button>
@@ -3187,7 +2878,7 @@ export default function App() {
                   setConfirmDialog(null);
                   if (fn) fn();
                 }}
-                className={`px-5 py-2 rounded-xl text-white text-xs font-bold shadow-sm transition ${confirmDialog.confirmColor}`}
+                className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-sm transition ${confirmDialog.confirmColor}`}
               >
                 {confirmDialog.confirmLabel}
               </button>
