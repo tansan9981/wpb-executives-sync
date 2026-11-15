@@ -11,10 +11,10 @@ import {
 import {
   CheckCircle2, Circle, Plus, Edit2, Trash2, ArrowUp, ArrowDown,
   History, Users, FileText, CheckSquare, Search,
-  Download, RotateCcw, FolderPlus, X, Check,
-  Calendar, LogOut, User, StickyNote, RefreshCw, AlertCircle,
+  Download, RotateCcw, X, Check,
+  Calendar, LogOut, User, RefreshCw, AlertCircle,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Shield, Star,
-  SlidersHorizontal
+  SlidersHorizontal, Maximize2
 } from 'lucide-react';
 
 // --- Firebase Configuration (即時同期最適化) ---
@@ -44,7 +44,7 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v6";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v7";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
@@ -339,6 +339,13 @@ const compareItems = (a, b, mode) => {
   return 0;
 };
 
+// 文章が長いかどうかを判定するヘルパー（スマホで「…」になる長さ・改行）
+const isLongContent = (text) => {
+  if (!text) return false;
+  const lines = String(text).split("\n");
+  return String(text).length > 75 || lines.length >= 3;
+};
+
 // --- 重要度セレクター ---
 function ImportanceSelector({ value, onChange, label = "重要度（1〜5 / なし）" }) {
   const currentVal = Number(value) || 0;
@@ -554,7 +561,7 @@ function WhoSelector({ selectedNames, setSelectedNames, selectedRoles, setSelect
           </div>
 
           {pickerTab === "names" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
               {KANBU_ROSTER.map((m) => {
                 const active = selectedNames.includes(m.name);
                 return (
@@ -562,23 +569,23 @@ function WhoSelector({ selectedNames, setSelectedNames, selectedRoles, setSelect
                     key={m.name}
                     type="button"
                     onClick={() => toggleItem(selectedNames, setSelectedNames, m.name)}
-                    className={`p-2 rounded-xl text-left text-xs font-bold border transition flex items-center justify-between ${
+                    className={`p-2.5 rounded-xl text-left text-xs font-bold border transition flex items-start justify-between gap-1 ${
                       active ? "bg-indigo-600 text-white border-indigo-600" : "bg-white text-slate-700 border-slate-200"
                     }`}
                   >
-                    <div className="truncate">
-                      <div>{m.name}</div>
-                      <div className={`text-[10px] truncate ${active ? "text-indigo-100" : "text-slate-400"}`}>
-                        {m.roles[0]}
+                    <div className="min-w-0">
+                      <div className="break-words">{m.name}</div>
+                      <div className={`text-[10px] leading-snug break-words mt-0.5 ${active ? "text-indigo-100" : "text-slate-400"}`}>
+                        {m.roles.join("・")}
                       </div>
                     </div>
-                    {active && <Check size={13} className="shrink-0" />}
+                    {active && <Check size={13} className="shrink-0 mt-0.5" />}
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="space-y-2.5 max-h-52 overflow-y-auto">
+            <div className="space-y-2.5 max-h-56 overflow-y-auto">
               {ROLE_CATEGORIES.map((cat) => (
                 <div key={cat.group}>
                   <div className="text-[11px] font-bold text-slate-500 mb-1">■ {cat.group}</div>
@@ -614,7 +621,7 @@ function WhoSelector({ selectedNames, setSelectedNames, selectedRoles, setSelect
         placeholder="自由記述（選択なしでここだけ入力、または選択＋補足記述もOK）"
         className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-slate-500 break-words">
         表示プレビュー: <strong className="text-indigo-700">{previewText}</strong>
       </div>
     </div>
@@ -663,7 +670,7 @@ function WhenSelector({ selectedDates, setSelectedDates, freeText, setFreeText }
         placeholder="自由記述（例：次回会議まで / 19:00まで ※日付選択と併用・これだけでもOK）"
         className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
       />
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-slate-500 break-words">
         表示プレビュー: <strong className="text-amber-800">{previewText}</strong>
       </div>
     </div>
@@ -706,11 +713,9 @@ export default function App() {
 
   const [syncStatus, setSyncStatus] = useState("connecting");
 
-  // メインタブ（4つに整理してスッキリ化）: 'mypage' | 'tasks' | 'decisions' | 'logs'
+  // メインタブ: 'mypage' | 'tasks' | 'decisions' | 'logs'
   const [activeTab, setActiveTab] = useState("mypage");
-  // マイページ内のサブタブ: 'todo' | 'memo'
   const [myPageSubTab, setMyPageSubTab] = useState("todo");
-  // ToDoタブ内のサブタブ: 'todo' (未完了) | 'done' (完了済み)
   const [taskSubTab, setTaskSubTab] = useState("todo");
 
   // 検索・フィルターパネルの開閉
@@ -724,10 +729,15 @@ export default function App() {
   const [doneSortMode, setDoneSortMode] = useState("manual");
   const [decisionSortMode, setDecisionSortMode] = useState("manual");
 
-  // 決定事項カテゴリの開閉状態（見やすさのため初期はすべて開く or 個別開閉可能）
+  // 決定事項カテゴリの開閉状態
   const [collapsedCats, setCollapsedCats] = useState({});
 
-  // ポップアップモーダル制御（追加フォームを普段は隠して画面を広く保つ）
+  // 長文カードの「▼ 全文・詳細を開く」展開状態管理 & 詳細ポップアップモーダル
+  const [expandedItemIds, setExpandedItemIds] = useState({});
+  const [detailModalItem, setDetailModalItem] = useState(null);
+  // detailModalItem: { type: 'task'|'decision'|'memo', data: {...}, catId?: string, catName?: string }
+
+  // ポップアップモーダル制御
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showAddDecisionModal, setShowAddDecisionModal] = useState(false);
   const [showAddMemoModal, setShowAddMemoModal] = useState(false);
@@ -743,7 +753,7 @@ export default function App() {
   const [newTaskWhat, setNewTaskWhat] = useState("");
   const [newTaskImportance, setNewTaskImportance] = useState(0);
 
-  // タスク編集用（モーダルで広く編集）
+  // タスク編集用
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskNames, setEditTaskNames] = useState([]);
   const [editTaskRoles, setEditTaskRoles] = useState([]);
@@ -762,7 +772,7 @@ export default function App() {
   const [newDecImportance, setNewDecImportance] = useState(0);
 
   // 決定事項編集用
-  const [editingDec, setEditingDec] = useState(null); // { catId, id, title, content, importance }
+  const [editingDec, setEditingDec] = useState(null);
 
   // マイページ：自由メモ用
   const [newMemoTitle, setNewMemoTitle] = useState("");
@@ -778,6 +788,14 @@ export default function App() {
     () => KANBU_ROSTER.find((m) => m.name === currentUser) || KANBU_ROSTER[0],
     [currentUser]
   );
+
+  // 長文の「…」をその場で展開・折りたたむトグル関数
+  const toggleExpandItem = (id) => {
+    setExpandedItemIds((prev) => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   // ワンクッション確認ダイアログ
   const requestConfirm = ({
@@ -819,7 +837,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v6");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v7");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -951,13 +969,12 @@ export default function App() {
     const target = boardState.tasks.find((t) => t.id === taskId);
     if (!target) return;
     const nextCompleted = !target.completed;
-    const shortWhat = target.what.length > 28 ? target.what.slice(0, 28) + "…" : target.what;
 
     requestConfirm({
       title: nextCompleted ? "ToDo完了の確認" : "未完了へ戻す確認",
       message: nextCompleted
-        ? `「${shortWhat}」（担当: ${target.who}）を【完了済み】にしますか？`
-        : `「${shortWhat}」（担当: ${target.who}）を【未完了のToDo】に戻しますか？`,
+        ? `以下のToDoを【完了済み】にしますか？\n\n・担当：${target.who}\n・内容：${target.what}`
+        : `以下のToDoを【未完了のToDo】に戻しますか？\n\n・担当：${target.who}\n・内容：${target.what}`,
       confirmLabel: nextCompleted ? "完了にする" : "未完了に戻す",
       confirmColor: nextCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700",
       onConfirm: () => {
@@ -967,8 +984,8 @@ export default function App() {
         commitState(
           { ...boardState, tasks: nextTasks },
           nextCompleted
-            ? `タスク「${shortWhat}」を【完了済み】に移動しました`
-            : `タスク「${shortWhat}」を【未完了】に戻しました`
+            ? `タスク（担当: ${target.who}）を【完了済み】に移動しました`
+            : `タスク（担当: ${target.who}）を【未完了】に戻しました`
         );
       }
     });
@@ -983,7 +1000,6 @@ export default function App() {
     const who = buildWhoString(newTaskNames, newTaskRoles, newTaskWhoFree);
     const when = buildWhenString(newTaskDates, newTaskWhenFree);
     const impMeta = getImportanceMeta(newTaskImportance);
-    const shortWhat = what.length > 28 ? what.slice(0, 28) + "…" : what;
 
     requestConfirm({
       title: isCompleted ? "完了済みリストへの追加確認" : "ToDoの追加確認",
@@ -1013,7 +1029,7 @@ export default function App() {
         setShowAddTaskModal(false);
         commitState(
           { ...boardState, tasks: [newTask, ...boardState.tasks] },
-          `タスク「${shortWhat}」（担当: ${who}）を追加しました`
+          `タスク（担当: ${who}）を追加しました`
         );
       }
     });
@@ -1022,7 +1038,7 @@ export default function App() {
   const startEditTask = (t) => {
     requestConfirm({
       title: "ToDoの編集開始",
-      message: `「${t.what.slice(0, 32)}${t.what.length > 32 ? "…" : ""}」の編集画面を開きますか？`,
+      message: `以下のToDoの編集画面を開きますか？\n\n・担当：${t.who}\n・内容：${t.what}`,
       confirmLabel: "編集する",
       onConfirm: () => {
         setEditingTaskId(t.id);
@@ -1069,7 +1085,7 @@ export default function App() {
     if (!target) return;
     requestConfirm({
       title: "ToDo削除の確認",
-      message: `「${target.what.slice(0, 35)}${target.what.length > 35 ? "…" : ""}」（担当: ${target.who}）を削除しますか？`,
+      message: `以下のToDoを削除しますか？\n\n・担当：${target.who}\n・内容：${target.what}`,
       confirmLabel: "削除する",
       confirmColor: "bg-red-600 hover:bg-red-700",
       onConfirm: () => {
@@ -1140,7 +1156,7 @@ export default function App() {
     }
     requestConfirm({
       title: "自由メモの追加確認",
-      message: `自由メモ「${title}」を追加しますか？`,
+      message: `自由メモ「${title}」を追加しますか？\n\n${body}`,
       confirmLabel: "追加する",
       onConfirm: () => {
         const newMemo = { id: "memo-" + Date.now(), title, body, updatedAt: formatNow() };
@@ -1288,7 +1304,7 @@ export default function App() {
   const startEditDecision = (catId, item) => {
     requestConfirm({
       title: "決定事項の編集開始",
-      message: `決定事項「${item.title}」の編集画面を開きますか？`,
+      message: `以下の決定事項の編集画面を開きますか？\n\n・項目名：${item.title}\n・内容：${item.content}`,
       confirmLabel: "編集する",
       onConfirm: () => {
         setEditingDec({
@@ -1314,7 +1330,7 @@ export default function App() {
 
     requestConfirm({
       title: "決定事項の保存確認",
-      message: `決定事項「${cleanTitle}」（重要度: ${impMeta.label}）を保存しますか？`,
+      message: `決定事項「${cleanTitle}」（重要度: ${impMeta.label}）を保存しますか？\n\n${editingDec.content.trim()}`,
       confirmLabel: "保存する",
       onConfirm: () => {
         const nextDecisions = boardState.decisions.map((cat) =>
@@ -1519,13 +1535,16 @@ export default function App() {
   const allCompletedCount = boardState.tasks.filter((t) => t.completed).length;
   const hasActiveFilter = Boolean(searchQuery || filterWho !== "ALL" || filterImportance !== "ALL");
 
-  // --- すっきり見やすいタスクカード ---
+  // --- タスクカード（長文「…」のタップ展開 ＆ 詳細ウィンドウ表示対応） ---
   const renderTaskCard = (t) => {
     const imp = Number(t.importance) || 0;
+    const isLong = isLongContent(t.what);
+    const isExpanded = Boolean(expandedItemIds[t.id]);
+
     return (
       <div
         key={t.id}
-        className={`border rounded-2xl p-4 transition shadow-2xs flex items-start gap-3.5 ${
+        className={`border rounded-2xl p-4 transition shadow-2xs flex items-start gap-3 ${
           t.completed
             ? "bg-slate-50 border-slate-200 opacity-85"
             : imp === 5
@@ -1547,24 +1566,32 @@ export default function App() {
         </button>
 
         <div className="flex-1 min-w-0 space-y-2">
-          {/* 上段：バッジと操作ボタン */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
+          {/* 上段：バッジ（折り返し表示で切れない）と操作ボタン */}
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               <ImportanceBadge importance={t.importance} />
               <span
-                className={`font-bold text-xs px-2.5 py-1 rounded-lg ${
+                className={`font-bold text-xs px-2.5 py-1 rounded-lg break-words ${
                   t.completed ? "bg-slate-200 text-slate-700" : "bg-indigo-50 text-indigo-900"
                 }`}
               >
                 👤 {t.who}
               </span>
-              <span className="bg-amber-50 text-amber-900 border border-amber-200/80 font-bold text-xs px-2.5 py-1 rounded-lg">
+              <span className="bg-amber-50 text-amber-900 border border-amber-200/80 font-bold text-xs px-2.5 py-1 rounded-lg break-words">
                 ⏰ {t.when}
               </span>
             </div>
 
-            {/* 操作ボタン（間隔を広げて押しやすく） */}
+            {/* 操作ボタン */}
             <div className="flex items-center gap-1 shrink-0 ml-auto">
+              <button
+                type="button"
+                onClick={() => setDetailModalItem({ type: "task", data: t })}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                title="詳細ウィンドウで全文を見る"
+              >
+                <Maximize2 size={14} />
+              </button>
               <button
                 type="button"
                 onClick={() => moveTask(t.id, -1)}
@@ -1600,31 +1627,72 @@ export default function App() {
             </div>
           </div>
 
-          {/* 下段：本文 */}
-          <p
-            onClick={() => startEditTask(t)}
-            className={`text-sm leading-relaxed whitespace-pre-wrap cursor-pointer rounded-lg p-1 -m-1 hover:bg-slate-50 ${
-              t.completed ? "line-through text-slate-500" : "text-slate-800"
-            }`}
+          {/* 下段：本文（長文のときは2行＋「…」で表示し、タップで全文展開！） */}
+          <div
+            onClick={() => {
+              if (isLong) toggleExpandItem(t.id);
+              else setDetailModalItem({ type: "task", data: t });
+            }}
+            className="cursor-pointer rounded-xl p-1 -m-1 hover:bg-slate-50/80 transition"
           >
-            {t.what}
-          </p>
+            <p
+              className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                t.completed ? "line-through text-slate-500" : "text-slate-800"
+              } ${isLong && !isExpanded ? "line-clamp-2" : ""}`}
+            >
+              {t.what}
+            </p>
+          </div>
 
-          {t.updatedBy && t.updatedBy !== "初期データ" && (
-            <div className="text-[11px] text-slate-400 text-right">
-              更新: {t.updatedBy} ({t.updatedAt})
-            </div>
-          )}
+          {/* 長文時の「▼ 全文・詳細を開く」ボタン ＆ 詳細ウィンドウボタン */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            {isLong ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleExpandItem(t.id)}
+                  className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg flex items-center gap-1 transition"
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp size={14} />
+                      <span>折りたたむ</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={14} />
+                      <span>全文・詳細を開く</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalItem({ type: "task", data: t })}
+                  className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                >
+                  <Maximize2 size={12} />
+                  <span>拡大表示</span>
+                </button>
+              </div>
+            ) : (
+              <span />
+            )}
+
+            {t.updatedBy && t.updatedBy !== "初期データ" && (
+              <div className="text-[11px] text-slate-400 ml-auto">
+                更新: {t.updatedBy} ({t.updatedAt})
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  // --- コンパクトな並び替え＆絞り込みバー（プルダウン式で画面を圧迫しない） ---
+  // --- コンパクトな並び替え＆絞り込みバー ---
   const renderCompactControlBar = ({ sortMode, setSortMode, onPermanentSort, includeWhoSort = true }) => (
     <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xs space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* 並び替えプルダウン */}
         <div className="flex items-center gap-2 flex-1 min-w-[210px]">
           <span className="text-xs font-bold text-slate-500 shrink-0">並び順:</span>
           <select
@@ -1666,7 +1734,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* 検索・フィルター展開時のみ表示 */}
       {(showFilterBar || hasActiveFilter) && (
         <div className="pt-2.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="relative">
@@ -1721,7 +1788,7 @@ export default function App() {
   );
 
   // =========================================================================
-  // 未ログイン時のログイン画面（幹部代20名から選択・1ヶ月間ログイン維持）
+  // 未ログイン時のログイン画面（役職名が「…」で切れないよう折り返し表示）
   // =========================================================================
   if (!authInfo) {
     return (
@@ -1737,7 +1804,7 @@ export default function App() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto p-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto p-1">
             {KANBU_ROSTER.map((member) => {
               const selected = selectedLoginCandidate === member.name;
               return (
@@ -1751,9 +1818,9 @@ export default function App() {
                       : "bg-slate-50 text-slate-800 border-slate-200 hover:bg-indigo-50"
                   }`}
                 >
-                  <div className="font-bold text-sm truncate">{member.name}</div>
-                  <div className={`text-[10px] truncate mt-0.5 ${selected ? "text-indigo-100" : "text-slate-500"}`}>
-                    {member.roles[0]}
+                  <div className="font-bold text-sm break-words">{member.name}</div>
+                  <div className={`text-[10px] leading-snug break-words mt-1 ${selected ? "text-indigo-100" : "text-slate-500"}`}>
+                    {member.roles.join(" / ")}
                   </div>
                 </button>
               );
@@ -1778,20 +1845,20 @@ export default function App() {
   }
 
   // =========================================================================
-  // メイン画面（すっきり整理された4タブ構成）
+  // メイン画面
   // =========================================================================
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 pb-24 font-sans">
-      {/* シンプルなヘッダー */}
+      {/* ヘッダー */}
       <header className="bg-indigo-900 text-white sticky top-0 z-30 shadow-xs">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm shrink-0">
               W
             </div>
-            <div className="truncate">
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-base font-bold truncate">WPB 幹部代Sync</h1>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base font-bold">WPB 幹部代Sync</h1>
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full shrink-0">
                   {syncStatus === "synced" ? "🟢 同期済" : syncStatus === "saving" ? "⚡ 同期中" : "🟡 保存済"}
                 </span>
@@ -1833,11 +1900,10 @@ export default function App() {
 
       <main className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         {/* =================================================================== */}
-        {/* タブ1: マイページ（自分の役職・自分宛てToDo・自由メモ） */}
+        {/* タブ1: マイページ */}
         {/* =================================================================== */}
         {activeTab === "mypage" && (
           <div className="space-y-4">
-            {/* コンパクトなマイ役職カード */}
             <div className="bg-white rounded-3xl p-5 shadow-2xs border border-slate-200 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -1880,7 +1946,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* マイページ内の切り替えタブ（自分宛てToDo ／ 自由メモ） */}
             <div className="flex bg-slate-200/80 p-1 rounded-2xl">
               <button
                 type="button"
@@ -1941,7 +2006,7 @@ export default function App() {
                 )}
               </div>
             ) : (
-              /* 自由メモタブ */
+              /* 自由メモタブ（長文の開閉・詳細表示対応） */
               <div className="space-y-3">
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200">
                   <span className="text-xs font-bold text-slate-600">
@@ -1961,76 +2026,117 @@ export default function App() {
                     まだ自由メモがありません。「＋ メモを追加」から作成できます。
                   </div>
                 ) : (
-                  userMemoList.map((memo) => (
-                    <div key={memo.id} className="bg-white border border-amber-200 rounded-2xl p-4 space-y-2 shadow-2xs">
-                      {editingMemoId === memo.id ? (
-                        <div className="space-y-2.5">
-                          <input
-                            type="text"
-                            value={editMemoForm.title}
-                            onChange={(e) => setEditMemoForm({ ...editMemoForm, title: e.target.value })}
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold"
-                          />
-                          <textarea
-                            rows={4}
-                            value={editMemoForm.body}
-                            onChange={(e) => setEditMemoForm({ ...editMemoForm, body: e.target.value })}
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setEditingMemoId(null)}
-                              className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
-                            >
-                              取消
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => saveEditMemo(memo.id)}
-                              className="px-4 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold"
-                            >
-                              💾 保存
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between gap-2">
-                            <h4
-                              onClick={() => startEditMemo(memo)}
-                              className="font-bold text-sm text-slate-900 cursor-pointer hover:underline"
-                            >
-                              📌 {memo.title}
-                            </h4>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] text-slate-400 mr-1">{memo.updatedAt}</span>
+                  userMemoList.map((memo) => {
+                    const isLong = isLongContent(memo.body);
+                    const isExpanded = Boolean(expandedItemIds[memo.id]);
+                    return (
+                      <div key={memo.id} className="bg-white border border-amber-200 rounded-2xl p-4 space-y-2 shadow-2xs">
+                        {editingMemoId === memo.id ? (
+                          <div className="space-y-2.5">
+                            <input
+                              type="text"
+                              value={editMemoForm.title}
+                              onChange={(e) => setEditMemoForm({ ...editMemoForm, title: e.target.value })}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold"
+                            />
+                            <textarea
+                              rows={4}
+                              value={editMemoForm.body}
+                              onChange={(e) => setEditMemoForm({ ...editMemoForm, body: e.target.value })}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                            />
+                            <div className="flex justify-end gap-2">
                               <button
                                 type="button"
-                                onClick={() => startEditMemo(memo)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg"
+                                onClick={() => setEditingMemoId(null)}
+                                className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
                               >
-                                <Edit2 size={14} />
+                                取消
                               </button>
                               <button
                                 type="button"
-                                onClick={() => deleteMemo(memo.id, memo.title)}
-                                className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg"
+                                onClick={() => saveEditMemo(memo.id)}
+                                className="px-4 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold"
                               >
-                                <Trash2 size={14} />
+                                💾 保存
                               </button>
                             </div>
                           </div>
-                          <p
-                            onClick={() => startEditMemo(memo)}
-                            className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed cursor-pointer"
-                          >
-                            {memo.body}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ))
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-2">
+                              <h4
+                                onClick={() => {
+                                  if (isLong) toggleExpandItem(memo.id);
+                                  else setDetailModalItem({ type: "memo", data: memo });
+                                }}
+                                className="font-bold text-sm text-slate-900 cursor-pointer break-words"
+                              >
+                                📌 {memo.title}
+                              </h4>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[11px] text-slate-400 mr-1">{memo.updatedAt}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setDetailModalItem({ type: "memo", data: memo })}
+                                  className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg"
+                                  title="拡大表示"
+                                >
+                                  <Maximize2 size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditMemo(memo)}
+                                  className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg"
+                                  title="編集"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteMemo(memo.id, memo.title)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg"
+                                  title="削除"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            <p
+                              onClick={() => {
+                                if (isLong) toggleExpandItem(memo.id);
+                                else setDetailModalItem({ type: "memo", data: memo });
+                              }}
+                              className={`text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed cursor-pointer ${
+                                isLong && !isExpanded ? "line-clamp-2" : ""
+                              }`}
+                            >
+                              {memo.body}
+                            </p>
+                            {isLong && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandItem(memo.id)}
+                                className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1 rounded-lg flex items-center gap-1 transition"
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp size={14} />
+                                    <span>折りたたむ</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown size={14} />
+                                    <span>全文・詳細を開く</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             )}
@@ -2038,7 +2144,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ2: 全体ToDo（やるべきこと ／ 完了済み をすっきり切り替え） */}
+        {/* タブ2: 全体ToDo */}
         {/* =================================================================== */}
         {activeTab === "tasks" && (
           <div className="space-y-4">
@@ -2048,7 +2154,7 @@ export default function App() {
                   ✅ 全体のToDo・完了済みリスト
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  未完了 {allUncompletedCount}件 ／ 完了済み {allCompletedCount}件
+                  未完了 {allUncompletedCount}件 ／ 完了済み {allCompletedCount}件（長文はタップで全文展開）
                 </p>
               </div>
               <button
@@ -2061,7 +2167,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* 未完了 / 完了済み の切り替えタブ */}
             <div className="flex bg-slate-200/80 p-1 rounded-2xl">
               <button
                 type="button"
@@ -2124,7 +2229,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ3: 今まで決まったこと（カテゴリ開閉式ですっきり見やすく） */}
+        {/* タブ3: 今まで決まったこと（見出し折り返し＆長文タップ展開対応） */}
         {/* =================================================================== */}
         {activeTab === "decisions" && (
           <div className="space-y-4">
@@ -2134,7 +2239,7 @@ export default function App() {
                   📋 今まで決まったこと（全{totalDecisions}件）
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  見出しをタップして開閉できます。重要度設定や並び替えにも対応
+                  長文の項目はタップすると全文が開きます
                 </p>
               </div>
               <button
@@ -2154,7 +2259,6 @@ export default function App() {
               includeWhoSort: false
             })}
 
-            {/* 全カテゴリの開閉一括ボタン */}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -2193,26 +2297,28 @@ export default function App() {
 
                 return (
                   <div key={cat.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xs">
-                    {/* アコーディオンヘッダー */}
+                    {/* アコーディオンヘッダー（スマホでも「…」で切れずに全文折り返し表示） */}
                     <div
                       onClick={() => setCollapsedCats({ ...collapsedCats, [cat.id]: !collapsedCats[cat.id] })}
-                      className="p-4 bg-slate-50/70 hover:bg-slate-100/70 cursor-pointer flex items-center justify-between gap-2 transition"
+                      className="p-4 bg-slate-50/70 hover:bg-slate-100/70 cursor-pointer flex items-start justify-between gap-2 transition"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
                         {isCollapsed ? (
-                          <ChevronRight size={18} className="text-indigo-600 shrink-0" />
+                          <ChevronRight size={18} className="text-indigo-600 shrink-0 mt-0.5" />
                         ) : (
-                          <ChevronDown size={18} className="text-indigo-600 shrink-0" />
+                          <ChevronDown size={18} className="text-indigo-600 shrink-0 mt-0.5" />
                         )}
-                        <h3 className="text-sm sm:text-base font-bold text-indigo-950 truncate">
-                          {cat.category}
-                        </h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm sm:text-base font-bold text-indigo-950 break-words leading-snug">
+                            {cat.category}
+                          </h3>
+                        </div>
                         <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
                           {visibleItems.length}件
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => moveCategory(cat.id, -1)}
@@ -2258,70 +2364,133 @@ export default function App() {
                         ) : (
                           visibleItems.map((item) => {
                             const imp = Number(item.importance) || 0;
+                            const isLong = isLongContent(item.content);
+                            const isExpanded = Boolean(expandedItemIds[item.id]);
+
                             return (
                               <div
                                 key={item.id}
-                                className={`p-3.5 rounded-2xl border transition flex items-start justify-between gap-3 ${
+                                className={`p-3.5 rounded-2xl border transition space-y-2 ${
                                   imp === 5
                                     ? "bg-rose-50/30 border-rose-200"
                                     : imp === 4
                                     ? "bg-orange-50/20 border-orange-200"
-                                    : "bg-white hover:bg-slate-50 border-slate-150"
+                                    : "bg-white hover:bg-slate-50/60 border-slate-150"
                                 }`}
                               >
-                                <div
-                                  onClick={() => startEditDecision(cat.id, item)}
-                                  className="flex-1 min-w-0 cursor-pointer space-y-1"
-                                >
-                                  <div className="flex flex-wrap items-center gap-1.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div
+                                    onClick={() => {
+                                      if (isLong) toggleExpandItem(item.id);
+                                      else setDetailModalItem({ type: "decision", data: item, catId: cat.id, catName: cat.category });
+                                    }}
+                                    className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 cursor-pointer"
+                                  >
                                     <ImportanceBadge importance={item.importance} />
-                                    <span className="font-bold text-sm text-slate-900">
+                                    <span className="font-bold text-sm text-slate-900 break-words">
                                       {item.title}
                                     </span>
                                   </div>
-                                  <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setDetailModalItem({ type: "decision", data: item, catId: cat.id, catName: cat.category })}
+                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                      title="詳細ウィンドウで全文を見る"
+                                    >
+                                      <Maximize2 size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveDecisionItem(cat.id, item.id, -1)}
+                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                      title="上へ移動"
+                                    >
+                                      <ArrowUp size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveDecisionItem(cat.id, item.id, 1)}
+                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                      title="下へ移動"
+                                    >
+                                      <ArrowDown size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditDecision(cat.id, item)}
+                                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
+                                      title="編集"
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteDecision(cat.id, item.id, item.title)}
+                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                      title="削除"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* 決定事項の本文（長文はタップで開閉） */}
+                                <div
+                                  onClick={() => {
+                                    if (isLong) toggleExpandItem(item.id);
+                                    else setDetailModalItem({ type: "decision", data: item, catId: cat.id, catName: cat.category });
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  <p
+                                    className={`text-xs sm:text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed ${
+                                      isLong && !isExpanded ? "line-clamp-2" : ""
+                                    }`}
+                                  >
                                     {item.content}
                                   </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  {isLong ? (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleExpandItem(item.id)}
+                                        className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg flex items-center gap-1 transition"
+                                      >
+                                        {isExpanded ? (
+                                          <>
+                                            <ChevronUp size={14} />
+                                            <span>折りたたむ</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown size={14} />
+                                            <span>全文・詳細を開く</span>
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDetailModalItem({ type: "decision", data: item, catId: cat.id, catName: cat.category })}
+                                        className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                                      >
+                                        <Maximize2 size={12} />
+                                        <span>拡大表示</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span />
+                                  )}
+
                                   {item.updatedBy && (
-                                    <div className="text-[10px] text-slate-400">
+                                    <div className="text-[10px] text-slate-400 ml-auto">
                                       更新: {item.updatedBy} ({item.updatedAt})
                                     </div>
                                   )}
-                                </div>
-
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => moveDecisionItem(cat.id, item.id, -1)}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                                    title="上へ移動"
-                                  >
-                                    <ArrowUp size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveDecisionItem(cat.id, item.id, 1)}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                                    title="下へ移動"
-                                  >
-                                    <ArrowDown size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => startEditDecision(cat.id, item)}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                                    title="編集"
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => deleteDecision(cat.id, item.id, item.title)}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                    title="削除"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
                                 </div>
                               </div>
                             );
@@ -2341,7 +2510,6 @@ export default function App() {
         {/* =================================================================== */}
         {activeTab === "logs" && (
           <div className="space-y-4">
-            {/* 便利ツールカード */}
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
               <h2 className="text-base font-bold text-slate-900">⚙️ 出力・役職表・データ管理</h2>
               <div className="flex flex-wrap gap-2.5">
@@ -2380,7 +2548,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 変更履歴リスト */}
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <History className="text-indigo-600" size={20} />
@@ -2390,9 +2557,9 @@ export default function App() {
                 {(boardState.logs || []).map((log) => (
                   <div
                     key={log.id}
-                    className="text-xs flex items-center justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-slate-50 border border-slate-100"
+                    className="text-xs flex items-start justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-slate-50 border border-slate-100"
                   >
-                    <div>
+                    <div className="break-words">
                       <span className="font-bold text-indigo-700 mr-1.5">[{log.user}]</span>
                       <span className="text-slate-700">{log.action}</span>
                     </div>
@@ -2406,7 +2573,7 @@ export default function App() {
       </main>
 
       {/* =================================================================== */}
-      {/* 下部ナビゲーションバー（シンプルな4タブ） */}
+      {/* 下部ナビゲーションバー */}
       {/* =================================================================== */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg">
         <div className="max-w-lg mx-auto flex">
@@ -2434,6 +2601,144 @@ export default function App() {
           })}
         </div>
       </nav>
+
+      {/* =================================================================== */}
+      {/* モーダル0: 全文・詳細表示ウィンドウ（スマホでも一切省略なしで読める） */}
+      {/* =================================================================== */}
+      {detailModalItem && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[88vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900">
+                {detailModalItem.type === "task"
+                  ? "📋 ToDoの詳細・全文"
+                  : detailModalItem.type === "decision"
+                  ? "📋 決定事項の詳細・全文"
+                  : "📌 自由メモの詳細・全文"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDetailModalItem(null)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+              {detailModalItem.type === "task" && (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <ImportanceBadge importance={detailModalItem.data.importance} />
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                      状態: {detailModalItem.data.completed ? "✅ 完了済み" : "🔥 未完了 (やるべきこと)"}
+                    </span>
+                  </div>
+                  <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3 space-y-1.5 text-xs">
+                    <div>
+                      <span className="font-bold text-indigo-900">👤 誰が（担当）：</span>
+                      <span className="text-slate-800 break-words">{detailModalItem.data.who}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-amber-900">⏰ いつまでに（期限）：</span>
+                      <span className="text-slate-800 break-words">{detailModalItem.data.when}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div className="text-xs font-bold text-slate-500 mb-1.5">📝 内容（全文）：</div>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">
+                      {detailModalItem.data.what}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {detailModalItem.type === "decision" && (
+                <>
+                  {detailModalItem.catName && (
+                    <div className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-xl break-words">
+                      {detailModalItem.catName}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ImportanceBadge importance={detailModalItem.data.importance} />
+                    <h4 className="font-bold text-base text-slate-900 break-words">
+                      {detailModalItem.data.title}
+                    </h4>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">
+                      {detailModalItem.data.content}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {detailModalItem.type === "memo" && (
+                <>
+                  <h4 className="font-bold text-base text-slate-900 break-words">
+                    📌 {detailModalItem.data.title}
+                  </h4>
+                  <div className="bg-amber-50/40 border border-amber-200 rounded-2xl p-4">
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">
+                      {detailModalItem.data.body}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-slate-100">
+              {detailModalItem.type === "task" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = detailModalItem.data;
+                      setDetailModalItem(null);
+                      handleToggleTask(t.id);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"
+                  >
+                    {detailModalItem.data.completed ? "未完了に戻す" : "完了にする"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = detailModalItem.data;
+                      setDetailModalItem(null);
+                      startEditTask(t);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold"
+                  >
+                    ✏️ 編集する
+                  </button>
+                </>
+              )}
+              {detailModalItem.type === "decision" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const { catId, data } = detailModalItem;
+                    setDetailModalItem(null);
+                    startEditDecision(catId, data);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold"
+                >
+                  ✏️ 編集する
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDetailModalItem(null)}
+                className="px-5 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =================================================================== */}
       {/* モーダル1: 新規ToDo追加ウィンドウ */}
@@ -2851,7 +3156,7 @@ export default function App() {
       )}
 
       {/* =================================================================== */}
-      {/* ワンクッション確認ダイアログ */}
+      {/* ワンクッション確認ダイアログ（全文スクロール確認可能） */}
       {/* =================================================================== */}
       {confirmDialog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
@@ -2860,9 +3165,11 @@ export default function App() {
               <AlertCircle className="text-indigo-600 shrink-0" size={22} />
               <h3 className="font-bold text-base">{confirmDialog.title}</h3>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-              {confirmDialog.message}
-            </p>
+            <div className="max-h-60 overflow-y-auto bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              <p className="text-xs sm:text-sm text-slate-600 whitespace-pre-wrap break-words leading-relaxed">
+                {confirmDialog.message}
+              </p>
+            </div>
             <div className="flex justify-end gap-2.5 pt-1">
               <button
                 type="button"
