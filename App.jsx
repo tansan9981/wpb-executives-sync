@@ -45,7 +45,7 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v9";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v10";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
@@ -78,41 +78,42 @@ const SORT_MODE_LABELS = {
 };
 
 // --- 写真の役職表に基づく幹部代メンバー20名と担当役職データ ---
+// ※機材購入担当 ＝ 「会計（平野春音）」「機材統括（浦山大樹）」
 const KANBU_ROSTER = [
-  { name: "安部建人", aliases: ["安部", "あべ"], roles: ["部長", "監督", "PA（設営）", "PA（卓）"], leadRoles: ["部長", "監督"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "小林秀星", aliases: ["小林", "しゅうせい", "こばしゅう"], roles: ["副部長", "PA（卓）", "差し入れ"], leadRoles: ["副部長", "PA（卓）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "平野春音", aliases: ["平野", "はるね"], roles: ["会計", "照明（設営）", "カメラ"], leadRoles: ["会計"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: false },
-  { name: "杉原和貴", aliases: ["杉原", "かずき"], roles: ["渉外", "PA（設営）"], leadRoles: ["渉外", "PA（設営）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "弘田隼大", aliases: ["弘田", "ひろはや"], roles: ["総務", "楽器庫"], leadRoles: ["総務", "楽器庫"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "溝上萌乃佳", aliases: ["溝上", "ほのか", "萌乃佳"], roles: ["ボーカル（パトリ）", "庶務", "電ドラ"], leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
-  { name: "渡会啓人", aliases: ["渡会", "わたらい"], roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"], leadRoles: ["ギター（パトリ）", "ビデオカメラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
-  { name: "浦山大樹", aliases: ["浦山", "大樹", "たいき"], roles: ["ベース（パトリ）", "PA（設営）", "機材統括"], leadRoles: ["ベース（パトリ）", "機材統括"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
-  { name: "滑川優斗", aliases: ["滑川", "なめこ"], roles: ["ドラム（パトリ）", "格納庫", "機材車"], leadRoles: ["ドラム（パトリ）", "格納庫"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
-  { name: "森柊実", aliases: ["森", "しゅうま", "柊実"], roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
-  { name: "春日京介", aliases: ["春日", "かすが"], roles: ["文連", "舞台", "機材車"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true },
-  { name: "大橋菜純", aliases: ["大橋", "なすみ", "菜純"], roles: ["文連"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true },
-  { name: "小川美晴", aliases: ["小川", "みはる", "美晴"], roles: ["チェックマン", "ビデオカメラ", "卒パ"], leadRoles: ["チェックマン", "卒パ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "亀谷博昭", aliases: ["亀谷", "かめや"], roles: ["舞台", "カメラ", "差し入れ", "機材車"], leadRoles: ["舞台"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "松尾知律", aliases: ["松尾", "ちりつ", "知律"], roles: ["舞台"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false },
-  { name: "清水康貴", aliases: ["清水", "やす", "康貴"], roles: ["楽器庫"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false },
-  { name: "大場怜", aliases: ["大場", "大場怜", "れん"], roles: ["照明（設営）", "BBQ"], leadRoles: ["照明（設営）", "BBQ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "小島大幹", aliases: ["小島", "こじだい", "大幹"], roles: ["照明（設営）", "カメラ", "卒パ"], leadRoles: ["カメラ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "朱函悦", aliases: ["朱函悦", "かんえつ", "函悦"], roles: ["照明（操作）", "web,SNS", "機材車"], leadRoles: ["web,SNS", "機材車"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
-  { name: "武捨裕吏", aliases: ["武捨", "ゆうり", "裕吏"], roles: ["電ドラ"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false }
+  { name: "安部建人", aliases: ["安部", "あべ"], roles: ["部長", "監督", "PA（設営）", "PA（卓）"], leadRoles: ["部長", "監督"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "小林秀星", aliases: ["小林", "しゅうせい", "こばしゅう"], roles: ["副部長", "PA（卓）", "差し入れ"], leadRoles: ["副部長", "PA（卓）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "平野春音", aliases: ["平野", "はるね"], roles: ["会計", "機材購入担当", "照明（設営）", "カメラ"], leadRoles: ["会計", "機材購入担当"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: false, isKizaiKonyu: true },
+  { name: "杉原和貴", aliases: ["杉原", "かずき"], roles: ["渉外", "PA（設営）"], leadRoles: ["渉外", "PA（設営）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "弘田隼大", aliases: ["弘田", "ひろはや"], roles: ["総務", "楽器庫"], leadRoles: ["総務", "楽器庫"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "溝上萌乃佳", aliases: ["溝上", "ほのか", "萌乃佳"], roles: ["ボーカル（パトリ）", "庶務", "電ドラ"], leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "渡会啓人", aliases: ["渡会", "わたらい"], roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"], leadRoles: ["ギター（パトリ）", "ビデオカメラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "浦山大樹", aliases: ["浦山", "大樹", "たいき"], roles: ["ベース（パトリ）", "機材統括", "機材購入担当", "PA（設営）"], leadRoles: ["ベース（パトリ）", "機材統括", "機材購入担当"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true, isKizaiKonyu: true },
+  { name: "滑川優斗", aliases: ["滑川", "なめこ"], roles: ["ドラム（パトリ）", "格納庫", "機材車"], leadRoles: ["ドラム（パトリ）", "格納庫"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "森柊実", aliases: ["森", "しゅうま", "柊実"], roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "春日京介", aliases: ["春日", "かすが"], roles: ["文連", "舞台", "機材車"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "大橋菜純", aliases: ["大橋", "なすみ", "菜純"], roles: ["文連"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "小川美晴", aliases: ["小川", "みはる", "美晴"], roles: ["チェックマン", "ビデオカメラ", "卒パ"], leadRoles: ["チェックマン", "卒パ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "亀谷博昭", aliases: ["亀谷", "かめや"], roles: ["舞台", "カメラ", "差し入れ", "機材車"], leadRoles: ["舞台"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "松尾知律", aliases: ["松尾", "ちりつ", "知律"], roles: ["舞台"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false, isKizaiKonyu: false },
+  { name: "清水康貴", aliases: ["清水", "やす", "康貴"], roles: ["楽器庫"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false, isKizaiKonyu: false },
+  { name: "大場怜", aliases: ["大場", "大場怜", "れん"], roles: ["照明（設営）", "BBQ"], leadRoles: ["照明（設営）", "BBQ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "小島大幹", aliases: ["小島", "こじだい", "大幹"], roles: ["照明（設営）", "カメラ", "卒パ"], leadRoles: ["カメラ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "朱函悦", aliases: ["朱函悦", "かんえつ", "函悦"], roles: ["照明（操作）", "web,SNS", "機材車"], leadRoles: ["web,SNS", "機材車"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true, isKizaiKonyu: false },
+  { name: "武捨裕吏", aliases: ["武捨", "ゆうり", "裕吏"], roles: ["電ドラ"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false, isKizaiKonyu: false }
 ];
 
 const ROLE_CATEGORIES = [
-  { group: "全体・グループ", roles: ["幹部代全員", "幹部", "幹文連", "パートリーダー（パトリ）", "各セクションリーダー"] },
+  { group: "全体・グループ", roles: ["幹部代全員", "幹部", "幹文連", "パートリーダー（パトリ）", "各セクションリーダー", "機材購入担当（会計・機材統括）"] },
   { group: "幹部", roles: ["部長", "副部長", "会計", "渉外", "総務"] },
   { group: "パートリーダー", roles: ["ボーカル（パトリ）", "ギター（パトリ）", "ベース（パトリ）", "ドラム（パトリ）", "キーボード（パトリ）"] },
-  { group: "ライブ 各責任者", roles: ["監督", "文連", "チェックマン", "舞台", "楽器庫", "格納庫", "照明（設営）", "照明（操作）", "PA（設営）", "PA（卓）", "庶務", "電ドラ", "カメラ", "ビデオカメラ", "差し入れ", "機材統括"] },
+  { group: "ライブ 各責任者", roles: ["監督", "文連", "チェックマン", "舞台", "楽器庫", "格納庫", "照明（設営）", "照明（操作）", "PA（設営）", "PA（卓）", "庶務", "電ドラ", "カメラ", "ビデオカメラ", "差し入れ", "機材統括", "機材購入担当"] },
   { group: "その他", roles: ["web,SNS", "BBQ", "機材車", "卒パ"] }
 ];
 
 const FULL_ROLE_TABLE = [
   { cat: "幹部", role: "部長", main: "安部建人", sub: "" },
   { cat: "幹部", role: "副部長", main: "小林秀星", sub: "" },
-  { cat: "幹部", role: "会計", main: "平野春音", sub: "" },
+  { cat: "幹部", role: "会計", main: "平野春音", sub: "機材購入担当" },
   { cat: "幹部", role: "渉外", main: "杉原和貴", sub: "" },
   { cat: "幹部", role: "総務", main: "弘田隼大", sub: "" },
   { cat: "パートリーダー", role: "ボーカル", main: "溝上萌乃佳", sub: "" },
@@ -135,7 +136,8 @@ const FULL_ROLE_TABLE = [
   { cat: "ライブ 各責任者", role: "カメラ", main: "★小島大幹, 平野春音, 亀谷博昭", sub: "岡本 茉麻, 田中 杏奈, 石坂 旭（PAがあるので未定）" },
   { cat: "ライブ 各責任者", role: "ビデオカメラ", main: "★渡会啓人, 小川美晴", sub: "" },
   { cat: "ライブ 各責任者", role: "差し入れ", main: "★森柊実, 亀谷博昭, 小林秀星", sub: "" },
-  { cat: "ライブ 各責任者", role: "機材統括", main: "★浦山大樹", sub: "" },
+  { cat: "ライブ 各責任者", role: "機材統括", main: "★浦山大樹", sub: "機材購入担当" },
+  { cat: "ライブ 各責任者", role: "機材購入担当", main: "★平野春音（会計）, ★浦山大樹（機材統括）", sub: "会計・機材統括の2名体制" },
   { cat: "その他", role: "web,SNS", main: "★朱函悦", sub: "" },
   { cat: "その他", role: "BBQ", main: "★大場怜", sub: "" },
   { cat: "その他", role: "機材車", main: "★朱函悦, 春日京介, 滑川優斗, 亀谷博昭", sub: "" },
@@ -154,7 +156,7 @@ const INITIAL_STATE = {
     { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材購入担当（会計・機材統括）", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
     { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
@@ -266,8 +268,27 @@ const formatDateLabel = (yyyyMmDd) => {
   return `${m}/${d}(${w})`;
 };
 
+// 既存のtodo-10（機材購入タスク）に「会計」が含まれていない旧データの場合、自動的に「機材購入担当（会計・機材統括）」へ補正するヘルパー
+const upgradeTasksForKizaiKonyu = (tasks) => {
+  if (!Array.isArray(tasks)) return INITIAL_STATE.tasks;
+  return tasks.map((t) => {
+    if (
+      t.id === "todo-10" &&
+      (t.who === "PA（設営）・照明（設営）・カメラ・機材統括" ||
+        t.who === "PA・照明・カメラ・機材購入担当")
+    ) {
+      return {
+        ...t,
+        who: "PA（設営）・照明（設営）・カメラ・機材購入担当（会計・機材統括）"
+      };
+    }
+    return t;
+  });
+};
+
 // ============================================================================
 // 自動判定ロジック（名前・役職に基づく厳密なマイページ対象判定）
+// ※機材購入担当 ＝ 会計（平野春音）・機材統括（浦山大樹）
 // ============================================================================
 const isTaskForMember = (taskWho, memberObj) => {
   if (!taskWho || !memberObj) return false;
@@ -296,7 +317,12 @@ const isTaskForMember = (taskWho, memberObj) => {
     }
   }
 
-  // 4. グループ名の一致判定
+  // 4. 「機材購入担当」「機材購入」指定（会計・機材統括の2名にマッチ）
+  if (memberObj.isKizaiKonyu && (raw.includes("機材購入担当") || raw.includes("機材購入"))) {
+    return true;
+  }
+
+  // 5. グループ名の一致判定
   const textWithoutKanbudai = raw
     .replace(/幹部代全員/g, "")
     .replace(/次期幹部代/g, "")
@@ -316,7 +342,7 @@ const isTaskForMember = (taskWho, memberObj) => {
     return true;
   }
 
-  // 5. 各役職の厳密一致判定
+  // 6. 各役職の厳密一致判定
   const memberRoles = memberObj.roles || [];
 
   for (const role of memberRoles) {
@@ -390,21 +416,16 @@ const isTaskInUserMyList = (task, memberObj) => {
   const excluded = Array.isArray(task.manualExcludedUsers) ? task.manualExcludedUsers : [];
   const added = Array.isArray(task.manualAddedUsers) ? task.manualAddedUsers : [];
 
-  // 「マイリストから削除」された場合は最優先でマイリストから外す
   if (excluded.includes(userName)) return false;
-  // 全体ToDoから「マイリストに追加」された場合はマイリストに含める
   if (added.includes(userName)) return true;
-  // それ以外は名前・役職による自動判定
   return isTaskForMember(task.who, memberObj);
 };
 
-// タスクの対象メンバー配列を取得（手動追加・手動除外も反映）
 const getTargetMembersForTask = (task) => {
   if (!task) return [];
   return KANBU_ROSTER.filter((m) => isTaskInUserMyList(task, m)).map((m) => m.name);
 };
 
-// タスクの `completedBy` 配列を正規化するヘルパー
 const normalizeCompletedBy = (completedByRaw) => {
   if (!Array.isArray(completedByRaw)) return [];
   return completedByRaw
@@ -840,7 +861,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
-          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : INITIAL_STATE.tasks,
+          tasks: upgradeTasksForKizaiKonyu(parsed.tasks),
           decisions: Array.isArray(parsed.decisions) ? parsed.decisions : INITIAL_STATE.decisions,
           memos: parsed.memos && typeof parsed.memos === "object" ? parsed.memos : {},
           logs: Array.isArray(parsed.logs) ? parsed.logs : INITIAL_STATE.logs,
@@ -886,7 +907,6 @@ export default function App() {
 
   // ToDo削除時の「マイリストから削除 ／ 全体から完全に削除」選択モーダル
   const [taskDeleteModal, setTaskDeleteModal] = useState(null);
-  // taskDeleteModal: { task, inMyList: boolean, selectedOption: 'remove_mylist' | 'delete_global' }
 
   // ポップアップモーダル制御
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -971,7 +991,7 @@ export default function App() {
         const data = snap.data();
         if (data && Array.isArray(data.tasks) && Array.isArray(data.decisions)) {
           const normalized = {
-            tasks: data.tasks,
+            tasks: upgradeTasksForKizaiKonyu(data.tasks),
             decisions: data.decisions,
             memos: data.memos && typeof data.memos === "object" ? data.memos : {},
             logs: Array.isArray(data.logs) ? data.logs : [],
@@ -990,7 +1010,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v9");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v10");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -1038,7 +1058,7 @@ export default function App() {
           const data = snap.data();
           if (data && Array.isArray(data.tasks) && Array.isArray(data.decisions)) {
             const normalized = {
-              tasks: data.tasks,
+              tasks: upgradeTasksForKizaiKonyu(data.tasks),
               decisions: data.decisions,
               memos: data.memos && typeof data.memos === "object" ? data.memos : {},
               logs: Array.isArray(data.logs) ? data.logs : [],
@@ -1135,7 +1155,7 @@ export default function App() {
         ].slice(0, 120);
 
         const updated = {
-          tasks: Array.isArray(baseData.tasks) ? baseData.tasks : boardState.tasks,
+          tasks: upgradeTasksForKizaiKonyu(Array.isArray(baseData.tasks) ? baseData.tasks : boardState.tasks),
           decisions: Array.isArray(baseData.decisions) ? baseData.decisions : boardState.decisions,
           memos: baseData.memos && typeof baseData.memos === "object" ? baseData.memos : boardState.memos,
           logs: nextLogs,
@@ -1197,7 +1217,6 @@ export default function App() {
   // =========================================================================
   // マイリストへの手動追加 ＆ 削除（マイリストから削除 ／ 全体から完全削除）
   // =========================================================================
-  // 全体のToDoリストから自分のマイリストに追加する機能（ワンクッション確認付き）
   const handleAddToMyList = (task) => {
     if (!task || !currentUser) return;
     requestConfirm({
@@ -1228,7 +1247,6 @@ export default function App() {
     });
   };
 
-  // 削除ボタン（🗑️ または「マイリストから削除」ボタン）を押したときの処理
   const openDeleteTaskModal = (task, defaultChoice = null) => {
     if (!task) return;
     const inMyList = isTaskInUserMyList(task, currentMemberObj);
@@ -1245,14 +1263,12 @@ export default function App() {
     });
   };
 
-  // 削除選択モーダルで選んだ選択肢を、さらにワンクッション確認のうえで実行
   const executeTaskDeleteChoice = () => {
     if (!taskDeleteModal) return;
     const { task, selectedOption } = taskDeleteModal;
     setTaskDeleteModal(null);
 
     if (selectedOption === "remove_mylist") {
-      // 自分のマイリストからのみ削除（全体ToDoには残す）
       requestConfirm({
         title: "【マイリストから削除】の最終確認",
         message: `以下のToDoを「${currentUser}」のマイリストからのみ削除しますか？\n\n・あなたのマイページ（マイToDo）から消えます。\n・全体のToDoリストや他のメンバーの画面にはそのまま残ります（あとから全体ToDoの「＋マイリストに追加」で戻すことも可能です）。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -1282,7 +1298,6 @@ export default function App() {
         }
       });
     } else if (selectedOption === "delete_global") {
-      // 全体のToDoリストから完全に削除
       requestConfirm({
         title: "【全体のToDoリストから完全削除】の最終確認",
         message: `以下のToDoを全体のToDoリストから完全に削除しますか？\n\n⚠️ 全員の画面および全体のToDoリストから完全に消去されます。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -2165,7 +2180,7 @@ export default function App() {
             </div>
           )}
 
-          {/* アクションバー（全文開閉・詳細表示・マイリスト追加/削除・未完了戻し） */}
+          {/* アクションバー */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {isLong && (
@@ -2197,7 +2212,6 @@ export default function App() {
                 <span>詳細・完了者一覧</span>
               </button>
 
-              {/* 全体ToDo画面などで「マイリストにない場合」→「＋ マイリストに追加」ボタンを表示 */}
               {!inMyList && (
                 <button
                   type="button"
@@ -2210,7 +2224,6 @@ export default function App() {
                 </button>
               )}
 
-              {/* マイリストに入っている場合：マイページ上では「マイリストから削除」、全体ToDo上では「マイリスト登録済（クリックで削除可）」 */}
               {inMyList && isMyPageContext && (
                 <button
                   type="button"
@@ -2322,6 +2335,7 @@ export default function App() {
           >
             <option value="ALL">👤 担当者：すべて表示</option>
             <option value="全員">幹部代全員</option>
+            <option value="機材購入担当">機材購入担当（会計・機材統括）</option>
             {KANBU_ROSTER.map((m) => (
               <option key={m.name} value={m.name}>
                 {m.name}（{m.roles[0]}）
@@ -2756,7 +2770,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ2: 全体ToDo（ここから自分のマイリストに追加も可能） */}
+        {/* タブ2: 全体ToDo */}
         {/* =================================================================== */}
         {activeTab === "tasks" && (
           <div className="space-y-4">
@@ -3359,7 +3373,6 @@ export default function App() {
                 自分のマイリストからのみ削除するか、全体のToDoリストから完全に削除するか選択してください：
               </p>
 
-              {/* 選択肢1: マイリストからのみ削除 */}
               {taskDeleteModal.inMyList && (
                 <button
                   type="button"
@@ -3390,7 +3403,6 @@ export default function App() {
                 </button>
               )}
 
-              {/* 選択肢2: 全体のToDoリストから完全削除 */}
               <button
                 type="button"
                 onClick={() =>
