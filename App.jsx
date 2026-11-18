@@ -14,7 +14,7 @@ import {
   Download, RotateCcw, X, Check,
   Calendar, LogOut, User, RefreshCw, AlertCircle,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Shield, Star,
-  SlidersHorizontal, Maximize2
+  SlidersHorizontal, Maximize2, Crown, KeyRound, UserCheck
 } from 'lucide-react';
 
 // --- Firebase Configuration (即時同期最適化) ---
@@ -44,10 +44,13 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v7";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v8";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
+
+// 管理者ユーザー名（変更履歴・ログイン履歴の閲覧権限）
+const ADMIN_USER = "小林秀星";
 
 // --- 重要度（なし / 1〜5）の定義 ---
 const IMPORTANCE_OPTIONS = [
@@ -64,7 +67,6 @@ const getImportanceMeta = (val) => {
   return IMPORTANCE_OPTIONS.find((o) => o.value === num) || IMPORTANCE_OPTIONS[0];
 };
 
-// --- 並び替えモードのラベル定義 ---
 const SORT_MODE_LABELS = {
   manual: "手動順（↑↓ボタンで移動）",
   added_asc: "追加順（昇順：古い→新しい）",
@@ -76,26 +78,26 @@ const SORT_MODE_LABELS = {
 
 // --- 写真の役職表に基づく幹部代メンバー20名と担当役職データ ---
 const KANBU_ROSTER = [
-  { name: "安部建人", aliases: ["安部", "あべ", "部長", "監督"], roles: ["部長", "監督", "PA（設営）", "PA（卓）"], leadRoles: ["部長", "監督"], groups: ["幹部", "ライブ各責任者", "PA"] },
-  { name: "小林秀星", aliases: ["小林", "しゅうせい", "こばしゅう", "副部長"], roles: ["副部長", "PA（卓）", "差し入れ"], leadRoles: ["副部長", "PA（卓）"], groups: ["幹部", "ライブ各責任者", "PA"] },
-  { name: "平野春音", aliases: ["平野", "はるね", "会計"], roles: ["会計", "照明（設営）", "カメラ"], leadRoles: ["会計"], groups: ["幹部", "ライブ各責任者", "照明"] },
-  { name: "杉原和貴", aliases: ["杉原", "かずき", "渉外"], roles: ["渉外", "PA（設営）"], leadRoles: ["渉外", "PA（設営）"], groups: ["幹部", "ライブ各責任者", "PA"] },
-  { name: "弘田隼大", aliases: ["弘田", "ひろはや", "総務"], roles: ["総務", "楽器庫"], leadRoles: ["総務", "楽器庫"], groups: ["幹部", "ライブ各責任者"] },
-  { name: "溝上萌乃佳", aliases: ["溝上", "ほのか", "萌乃佳"], roles: ["ボーカル（パトリ）", "庶務", "電ドラ"], leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者"] },
-  { name: "渡会啓人", aliases: ["渡会", "わたらい"], roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"], leadRoles: ["ギター（パトリ）", "ビデオカメラ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者"] },
-  { name: "浦山大樹", aliases: ["浦山", "大樹", "たいき"], roles: ["ベース（パトリ）", "PA（設営）", "機材統括"], leadRoles: ["ベース（パトリ）", "機材統括"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "PA"] },
-  { name: "滑川優斗", aliases: ["滑川", "なめこ"], roles: ["ドラム（パトリ）", "格納庫", "機材車"], leadRoles: ["ドラム（パトリ）", "格納庫"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "その他"] },
-  { name: "森柊実", aliases: ["森", "しゅうま", "柊実"], roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], groups: ["パートリーダー", "パトリ", "ライブ各責任者", "照明"] },
-  { name: "春日京介", aliases: ["春日", "かすが"], roles: ["文連", "舞台", "機材車"], leadRoles: ["文連"], groups: ["ライブ各責任者", "幹文連", "その他"] },
-  { name: "大橋菜純", aliases: ["大橋", "なすみ", "菜純"], roles: ["文連"], leadRoles: ["文連"], groups: ["ライブ各責任者", "幹文連"] },
-  { name: "小川美晴", aliases: ["小川", "みはる", "美晴"], roles: ["チェックマン", "ビデオカメラ", "卒パ"], leadRoles: ["チェックマン", "卒パ"], groups: ["ライブ各責任者", "その他"] },
-  { name: "亀谷博昭", aliases: ["亀谷", "かめや"], roles: ["舞台", "カメラ", "差し入れ", "機材車"], leadRoles: ["舞台"], groups: ["ライブ各責任者", "その他"] },
-  { name: "松尾知律", aliases: ["松尾", "ちりつ", "知律"], roles: ["舞台"], leadRoles: [], groups: ["ライブ各責任者"] },
-  { name: "清水康貴", aliases: ["清水", "やす", "康貴"], roles: ["楽器庫"], leadRoles: [], groups: ["ライブ各責任者"] },
-  { name: "大場怜", aliases: ["大場", "れん", "蓮", "怜"], roles: ["照明（設営）", "BBQ"], leadRoles: ["照明（設営）", "BBQ"], groups: ["ライブ各責任者", "照明", "その他"] },
-  { name: "小島大幹", aliases: ["小島", "こじだい", "大幹"], roles: ["照明（設営）", "カメラ", "卒パ"], leadRoles: ["カメラ"], groups: ["ライブ各責任者", "照明", "その他"] },
-  { name: "朱函悦", aliases: ["朱", "かんえつ", "函悦"], roles: ["照明（操作）", "web,SNS", "機材車"], leadRoles: ["web,SNS", "機材車"], groups: ["ライブ各責任者", "照明", "その他"] },
-  { name: "武捨裕吏", aliases: ["武捨", "ゆうり", "裕吏"], roles: ["電ドラ"], leadRoles: [], groups: ["ライブ各責任者"] }
+  { name: "安部建人", aliases: ["安部", "あべ"], roles: ["部長", "監督", "PA（設営）", "PA（卓）"], leadRoles: ["部長", "監督"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "小林秀星", aliases: ["小林", "しゅうせい", "こばしゅう"], roles: ["副部長", "PA（卓）", "差し入れ"], leadRoles: ["副部長", "PA（卓）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "平野春音", aliases: ["平野", "はるね"], roles: ["会計", "照明（設営）", "カメラ"], leadRoles: ["会計"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: false },
+  { name: "杉原和貴", aliases: ["杉原", "かずき"], roles: ["渉外", "PA（設営）"], leadRoles: ["渉外", "PA（設営）"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "弘田隼大", aliases: ["弘田", "ひろはや"], roles: ["総務", "楽器庫"], leadRoles: ["総務", "楽器庫"], isKanbu: true, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "溝上萌乃佳", aliases: ["溝上", "ほのか", "萌乃佳"], roles: ["ボーカル（パトリ）", "庶務", "電ドラ"], leadRoles: ["ボーカル（パトリ）", "庶務", "電ドラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
+  { name: "渡会啓人", aliases: ["渡会", "わたらい"], roles: ["ギター（パトリ）", "チェックマン", "ビデオカメラ"], leadRoles: ["ギター（パトリ）", "ビデオカメラ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
+  { name: "浦山大樹", aliases: ["浦山", "大樹", "たいき"], roles: ["ベース（パトリ）", "PA（設営）", "機材統括"], leadRoles: ["ベース（パトリ）", "機材統括"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
+  { name: "滑川優斗", aliases: ["滑川", "なめこ"], roles: ["ドラム（パトリ）", "格納庫", "機材車"], leadRoles: ["ドラム（パトリ）", "格納庫"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
+  { name: "森柊実", aliases: ["森", "しゅうま", "柊実"], roles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], leadRoles: ["キーボード（パトリ）", "照明（操作）", "差し入れ"], isKanbu: false, isPatri: true, isBunren: false, isSectionLeader: true },
+  { name: "春日京介", aliases: ["春日", "かすが"], roles: ["文連", "舞台", "機材車"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true },
+  { name: "大橋菜純", aliases: ["大橋", "なすみ", "菜純"], roles: ["文連"], leadRoles: ["文連"], isKanbu: false, isPatri: false, isBunren: true, isSectionLeader: true },
+  { name: "小川美晴", aliases: ["小川", "みはる", "美晴"], roles: ["チェックマン", "ビデオカメラ", "卒パ"], leadRoles: ["チェックマン", "卒パ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "亀谷博昭", aliases: ["亀谷", "かめや"], roles: ["舞台", "カメラ", "差し入れ", "機材車"], leadRoles: ["舞台"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "松尾知律", aliases: ["松尾", "ちりつ", "知律"], roles: ["舞台"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false },
+  { name: "清水康貴", aliases: ["清水", "やす", "康貴"], roles: ["楽器庫"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false },
+  { name: "大場怜", aliases: ["大場", "大場怜", "れん"], roles: ["照明（設営）", "BBQ"], leadRoles: ["照明（設営）", "BBQ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "小島大幹", aliases: ["小島", "こじだい", "大幹"], roles: ["照明（設営）", "カメラ", "卒パ"], leadRoles: ["カメラ"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "朱函悦", aliases: ["朱函悦", "かんえつ", "函悦"], roles: ["照明（操作）", "web,SNS", "機材車"], leadRoles: ["web,SNS", "機材車"], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: true },
+  { name: "武捨裕吏", aliases: ["武捨", "ゆうり", "裕吏"], roles: ["電ドラ"], leadRoles: [], isKanbu: false, isPatri: false, isBunren: false, isSectionLeader: false }
 ];
 
 const ROLE_CATEGORIES = [
@@ -142,30 +144,30 @@ const FULL_ROLE_TABLE = [
 // --- 初期データ ---
 const INITIAL_STATE = {
   tasks: [
-    { id: "todo-1", createdAt: 1001, who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-2", createdAt: 1002, who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-3", createdAt: 1003, who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-4", createdAt: 1004, who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-5", createdAt: 1005, who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-6", createdAt: 1006, who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-14", createdAt: 1014, who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-15", createdAt: 1015, who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-16", createdAt: 1016, who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-17", createdAt: 1017, who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-18", createdAt: 1018, who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-1", createdAt: 2001, who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-2", createdAt: 2002, who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-3", createdAt: 2003, who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-4", createdAt: 2004, who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/01" },
-    { id: "done-5", createdAt: 2005, who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "10/14" },
-    { id: "done-6", createdAt: 2006, who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, importance: 0, updatedBy: "初期データ", updatedAt: "11/11" }
+    { id: "todo-1", createdAt: 1001, who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-2", createdAt: 1002, who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-3", createdAt: 1003, who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-4", createdAt: 1004, who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-5", createdAt: 1005, who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-6", createdAt: 1006, who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-14", createdAt: 1014, who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-15", createdAt: 1015, who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-16", createdAt: 1016, who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-17", createdAt: 1017, who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-18", createdAt: 1018, who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-1", createdAt: 2001, who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-2", createdAt: 2002, who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-3", createdAt: 2003, who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-4", createdAt: 2004, who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/01" },
+    { id: "done-5", createdAt: 2005, who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "10/14" },
+    { id: "done-6", createdAt: 2006, who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" }
   ],
   decisions: [
     {
@@ -236,6 +238,7 @@ const INITIAL_STATE = {
   logs: [
     { id: "log-init", user: "システム", action: "2026年10月〜11月11日会議の決定事項・ToDoリストを初期構築しました", time: "2026/11/11" }
   ],
+  loginLogs: [],
   lastModified: 0
 };
 
@@ -262,25 +265,161 @@ const formatDateLabel = (yyyyMmDd) => {
   return `${m}/${d}(${w})`;
 };
 
+// ============================================================================
+// 厳密なマイページ対象判定ロジック（他の役職・名前の誤混入を完全に防止）
+// ============================================================================
 const isTaskForMember = (taskWho, memberObj) => {
   if (!taskWho || !memberObj) return false;
-  const text = taskWho.toLowerCase();
-  if (text.includes("全員") || text.includes("全体") || text.includes("all") || text.includes("幹部代メンバー")) {
+  // スペース正規化
+  const raw = String(taskWho).replace(/\s+/g, "");
+
+  // 1. 全体・全員対象のキーワード
+  if (
+    raw.includes("幹部代全員") ||
+    raw.includes("全員") ||
+    raw.includes("全体") ||
+    raw.includes("幹部代メンバー") ||
+    raw.toUpperCase().includes("ALL")
+  ) {
     return true;
   }
-  if (text.includes(memberObj.name.toLowerCase())) return true;
-  for (const alias of memberObj.aliases) {
-    if (alias && text.includes(alias.toLowerCase())) return true;
+
+  // 2. 本人のフルネーム一致
+  if (raw.includes(memberObj.name.replace(/\s+/g, ""))) {
+    return true;
   }
-  for (const role of memberObj.roles) {
-    const cleanRole = role.replace(/（.*?）/g, "").toLowerCase();
-    if (cleanRole && text.includes(cleanRole)) return true;
+
+  // 3. 本人の別名（エイリアス）一致
+  for (const alias of memberObj.aliases || []) {
+    if (alias && alias.length >= 2 && raw.includes(alias)) {
+      return true;
+    }
   }
-  for (const grp of memberObj.groups) {
-    if (grp === "幹部" && (text.includes("幹部代") || text.includes("現幹部"))) continue;
-    if (grp && text.includes(grp.toLowerCase())) return true;
+
+  // 4. グループ名の一致判定（「幹部代」「現幹部」と「幹部」を厳密に区別）
+  const textWithoutKanbudai = raw
+    .replace(/幹部代全員/g, "")
+    .replace(/次期幹部代/g, "")
+    .replace(/幹部代/g, "")
+    .replace(/現幹部/g, "");
+
+  // 「幹部」単独指定（部長・副部長・会計・渉外・総務の5名のみ）
+  if (memberObj.isKanbu && textWithoutKanbudai.includes("幹部")) {
+    return true;
   }
+
+  // 「幹文連」指定（幹部5名 ＋ 文連2名のみ）
+  if ((memberObj.isKanbu || memberObj.isBunren) && raw.includes("幹文連")) {
+    return true;
+  }
+
+  // 「パートリーダー」「パトリ」指定（パトリ5名のみ）
+  if (memberObj.isPatri && (raw.includes("パートリーダー") || raw.includes("パトリ"))) {
+    return true;
+  }
+
+  // 「セクションリーダー」「各責任者」指定
+  if (memberObj.isSectionLeader && (raw.includes("セクションリーダー") || raw.includes("各責任者"))) {
+    return true;
+  }
+
+  // 5. 各役職の厳密一致判定（部分一致による誤爆を除外してから判定）
+  const memberRoles = memberObj.roles || [];
+
+  for (const role of memberRoles) {
+    if (role === "部長") {
+      // 「副部長」を消した上で「部長」が残っている場合のみ部長にマッチ
+      const withoutFukubucho = raw.replace(/副部長/g, "");
+      if (withoutFukubucho.includes("部長")) return true;
+    } else if (role === "副部長") {
+      if (raw.includes("副部長")) return true;
+    } else if (role === "カメラ") {
+      // 「ビデオカメラ」を消した上で「カメラ」が残っている場合のみカメラにマッチ
+      const withoutVideoCamera = raw.replace(/ビデオカメラ/g, "");
+      if (withoutVideoCamera.includes("カメラ")) return true;
+    } else if (role === "ビデオカメラ") {
+      if (raw.includes("ビデオカメラ")) return true;
+    } else if (role === "照明（設営）") {
+      if (raw.includes("照明（設営）") || raw.includes("照明(設営)") || raw.includes("照明設営")) {
+        return true;
+      }
+      // 「照明（操作）」を消しても「照明」が残る（＝単に「照明」と書かれている）場合もマッチ
+      const withoutSousa = raw
+        .replace(/照明（操作）/g, "")
+        .replace(/照明\(操作\)/g, "")
+        .replace(/照明操作/g, "");
+      if (withoutSousa.includes("照明")) return true;
+    } else if (role === "照明（操作）") {
+      if (raw.includes("照明（操作）") || raw.includes("照明(操作)") || raw.includes("照明操作")) {
+        return true;
+      }
+      // 「照明（設営）」を消しても「照明」が残る（＝単に「照明」と書かれている）場合もマッチ
+      const withoutSetsuei = raw
+        .replace(/照明（設営）/g, "")
+        .replace(/照明\(設営\)/g, "")
+        .replace(/照明設営/g, "");
+      if (withoutSetsuei.includes("照明")) return true;
+    } else if (role === "PA（設営）") {
+      if (raw.includes("PA（設営）") || raw.includes("PA(設営)") || raw.includes("PA設営")) {
+        return true;
+      }
+      // 「PA（卓）」を消しても「PA」が残る（＝単に「PA」と書かれている）場合もマッチ
+      const withoutTaku = raw
+        .replace(/PA（卓）/g, "")
+        .replace(/PA\(卓\)/g, "")
+        .replace(/PA卓/g, "");
+      if (withoutTaku.includes("PA")) return true;
+    } else if (role === "PA（卓）") {
+      if (raw.includes("PA（卓）") || raw.includes("PA(卓)") || raw.includes("PA卓")) {
+        return true;
+      }
+      // 「PA（設営）」を消しても「PA」が残る（＝単に「PA」と書かれている）場合もマッチ
+      const withoutSetsuei = raw
+        .replace(/PA（設営）/g, "")
+        .replace(/PA\(設営\)/g, "")
+        .replace(/PA設営/g, "");
+      if (withoutSetsuei.includes("PA")) return true;
+    } else if (role === "文連") {
+      // 「幹文連」も含めて文連担当には表示
+      if (raw.includes("文連")) return true;
+    } else if (role.endsWith("（パトリ）")) {
+      const partName = role.replace("（パトリ）", "");
+      if (raw.includes(role) || raw.includes(`${partName}パトリ`) || raw.includes(`${partName}（パトリ）`)) {
+        return true;
+      }
+    } else {
+      // その他の役職（会計、渉外、総務、監督、チェックマン、舞台、楽器庫、格納庫、庶務、電ドラ、差し入れ、機材統括、web,SNS、BBQ、機材車、卒パ）
+      if (raw.includes(role)) return true;
+    }
+  }
+
   return false;
+};
+
+// タスクの対象となる全メンバー配列を取得（複数人タスクかどうかの判定や詳細画面での表示用）
+const getTargetMembersForTask = (taskWho) => {
+  return KANBU_ROSTER.filter((m) => isTaskForMember(taskWho, m)).map((m) => m.name);
+};
+
+// タスクの `completedBy` 配列を正規化するヘルパー（[{ name, time }] 形式に統一）
+const normalizeCompletedBy = (completedByRaw) => {
+  if (!Array.isArray(completedByRaw)) return [];
+  return completedByRaw
+    .map((entry) => {
+      if (typeof entry === "string") return { name: entry, time: "" };
+      if (entry && typeof entry === "object" && entry.name) {
+        return { name: String(entry.name), time: String(entry.time || "") };
+      }
+      return null;
+    })
+    .filter(Boolean);
+};
+
+// 指定ユーザーがそのタスクを「個人完了」しているか判定
+const isCompletedByUser = (task, userName) => {
+  if (!task || !userName) return false;
+  const list = normalizeCompletedBy(task.completedBy);
+  return list.some((entry) => entry.name === userName);
 };
 
 const buildWhoString = (selectedNames, selectedRoles, freeText) => {
@@ -339,7 +478,6 @@ const compareItems = (a, b, mode) => {
   return 0;
 };
 
-// 文章が長いかどうかを判定するヘルパー（スマホで「…」になる長さ・改行）
 const isLongContent = (text) => {
   if (!text) return false;
   const lines = String(text).split("\n");
@@ -704,6 +842,7 @@ export default function App() {
           decisions: Array.isArray(parsed.decisions) ? parsed.decisions : INITIAL_STATE.decisions,
           memos: parsed.memos && typeof parsed.memos === "object" ? parsed.memos : {},
           logs: Array.isArray(parsed.logs) ? parsed.logs : INITIAL_STATE.logs,
+          loginLogs: Array.isArray(parsed.loginLogs) ? parsed.loginLogs : [],
           lastModified: parsed.lastModified || 0
         };
       }
@@ -715,8 +854,12 @@ export default function App() {
 
   // メインタブ: 'mypage' | 'tasks' | 'decisions' | 'logs'
   const [activeTab, setActiveTab] = useState("mypage");
+  // マイページ内のサブタブ: 'todo' (未完了) | 'done' (完了済み) | 'memo' (自由メモ)
   const [myPageSubTab, setMyPageSubTab] = useState("todo");
+  // 全体ToDoタブ内のサブタブ: 'todo' (未完了) | 'done' (完了済み)
   const [taskSubTab, setTaskSubTab] = useState("todo");
+  // 管理者タブ内のサブタブ: 'login' (ログイン履歴) | 'edit' (変更履歴)
+  const [adminLogSubTab, setAdminLogSubTab] = useState("login");
 
   // 検索・フィルターパネルの開閉
   const [showFilterBar, setShowFilterBar] = useState(false);
@@ -735,7 +878,10 @@ export default function App() {
   // 長文カードの「▼ 全文・詳細を開く」展開状態管理 & 詳細ポップアップモーダル
   const [expandedItemIds, setExpandedItemIds] = useState({});
   const [detailModalItem, setDetailModalItem] = useState(null);
-  // detailModalItem: { type: 'task'|'decision'|'memo', data: {...}, catId?: string, catName?: string }
+
+  // 複数人ToDoの「自分だけ完了 ／ 全体完了 ／ 未完了に戻す」選択モーダル
+  const [taskCompletionModal, setTaskCompletionModal] = useState(null);
+  // taskCompletionModal: { task, mode: 'complete' | 'uncomplete', selectedOption: 'self' | 'all' }
 
   // ポップアップモーダル制御
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -779,17 +925,18 @@ export default function App() {
   const [newMemoBody, setNewMemoBody] = useState("");
   const [editingMemoId, setEditingMemoId] = useState(null);
   const [editMemoForm, setEditMemoForm] = useState({ title: "", body: "" });
-  const [showCompletedInMyPage, setShowCompletedInMyPage] = useState(false);
 
   const broadcastChannelRef = useRef(null);
+  const sessionAccessLoggedRef = useRef(false);
 
   const currentUser = authInfo?.userName || "";
+  const isAdmin = currentUser === ADMIN_USER;
+
   const currentMemberObj = useMemo(
     () => KANBU_ROSTER.find((m) => m.name === currentUser) || KANBU_ROSTER[0],
     [currentUser]
   );
 
-  // 長文の「…」をその場で展開・折りたたむトグル関数
   const toggleExpandItem = (id) => {
     setExpandedItemIds((prev) => ({
       ...prev,
@@ -823,6 +970,7 @@ export default function App() {
             decisions: data.decisions,
             memos: data.memos && typeof data.memos === "object" ? data.memos : {},
             logs: Array.isArray(data.logs) ? data.logs : [],
+            loginLogs: Array.isArray(data.loginLogs) ? data.loginLogs : [],
             lastModified: data.lastModified || Date.now()
           };
           setBoardState(normalized);
@@ -837,7 +985,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v7");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v8");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -889,6 +1037,7 @@ export default function App() {
               decisions: data.decisions,
               memos: data.memos && typeof data.memos === "object" ? data.memos : {},
               logs: Array.isArray(data.logs) ? data.logs : [],
+              loginLogs: Array.isArray(data.loginLogs) ? data.loginLogs : [],
               lastModified: data.lastModified || 0
             };
             setBoardState(normalized);
@@ -911,19 +1060,31 @@ export default function App() {
     };
   }, []);
 
-  const commitState = (nextState, logMessage) => {
+  // 状態更新＆クラウド同期
+  const commitState = (nextState, logMessage, activeUserName = currentUser, customLoginLogEntry = null) => {
     const nowTs = Date.now();
-    const newLog = {
-      id: "log-" + nowTs,
-      user: currentUser || "メンバー",
-      action: logMessage,
-      time: formatNow()
-    };
+    const nextLogs = logMessage
+      ? [
+          {
+            id: "log-" + nowTs,
+            user: activeUserName || "メンバー",
+            action: logMessage,
+            time: formatNow()
+          },
+          ...(nextState.logs || boardState.logs || [])
+        ].slice(0, 120)
+      : nextState.logs || boardState.logs || [];
+
+    const nextLoginLogs = customLoginLogEntry
+      ? [customLoginLogEntry, ...(nextState.loginLogs || boardState.loginLogs || [])].slice(0, 150)
+      : nextState.loginLogs || boardState.loginLogs || [];
+
     const updated = {
       tasks: nextState.tasks || boardState.tasks,
       decisions: nextState.decisions || boardState.decisions,
       memos: nextState.memos || boardState.memos || {},
-      logs: [newLog, ...(nextState.logs || boardState.logs || [])].slice(0, 80),
+      logs: nextLogs,
+      loginLogs: nextLoginLogs,
       lastModified: nowTs
     };
 
@@ -941,13 +1102,78 @@ export default function App() {
     }
   };
 
+  // --- ログイン履歴記録（新規ログイン時 ＆ セッション開始時） ---
+  const recordLoginEvent = async (userName, typeLabel = "ログイン") => {
+    const nowTs = Date.now();
+    const loginEntry = {
+      id: "login-" + nowTs,
+      user: userName,
+      type: typeLabel,
+      time: formatNow(),
+      timestamp: nowTs
+    };
+
+    // 最新のクラウド状態を取得してから追記することで上書き競合を防止
+    if (db) {
+      try {
+        const docRef = doc(db, SYNC_COLLECTION, SYNC_DOC_ID);
+        const snap = await getDoc(docRef);
+        const baseData = snap.exists() ? snap.data() : boardState;
+        const nextLoginLogs = [loginEntry, ...(Array.isArray(baseData.loginLogs) ? baseData.loginLogs : [])].slice(0, 150);
+        const nextLogs = [
+          {
+            id: "log-" + nowTs,
+            user: userName,
+            action: `${typeLabel}しました`,
+            time: formatNow()
+          },
+          ...(Array.isArray(baseData.logs) ? baseData.logs : [])
+        ].slice(0, 120);
+
+        const updated = {
+          tasks: Array.isArray(baseData.tasks) ? baseData.tasks : boardState.tasks,
+          decisions: Array.isArray(baseData.decisions) ? baseData.decisions : boardState.decisions,
+          memos: baseData.memos && typeof baseData.memos === "object" ? baseData.memos : boardState.memos,
+          logs: nextLogs,
+          loginLogs: nextLoginLogs,
+          lastModified: nowTs
+        };
+        setBoardState(updated);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+        await setDoc(docRef, updated);
+        setSyncStatus("synced");
+        return;
+      } catch (e) {
+        console.warn("ログイン記録エラー:", e);
+      }
+    }
+
+    commitState(boardState, `${typeLabel}しました`, userName, loginEntry);
+  };
+
+  // 1ヶ月ログイン維持で画面を開いたときにもアクセス日時を記録（1セッションにつき1回）
+  useEffect(() => {
+    if (authInfo?.userName && !sessionAccessLoggedRef.current) {
+      sessionAccessLoggedRef.current = true;
+      const lastLoggedKey = `wpb_last_access_logged_${authInfo.userName}`;
+      const lastTime = Number(sessionStorage.getItem(lastLoggedKey) || 0);
+      if (Date.now() - lastTime > 5 * 60 * 1000) {
+        sessionStorage.setItem(lastLoggedKey, String(Date.now()));
+        recordLoginEvent(authInfo.userName, "アクセス（ログイン維持）");
+      }
+    }
+  }, [authInfo?.userName]);
+
   // --- ログイン・ログアウト ---
   const handleLogin = (nameToLogin) => {
     if (!nameToLogin) return;
     const now = Date.now();
     const newAuth = { userName: nameToLogin, loginAt: now, expiresAt: now + LOGIN_DURATION_MS };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newAuth));
+    sessionStorage.setItem(`wpb_last_access_logged_${nameToLogin}`, String(now));
+    sessionAccessLoggedRef.current = true;
     setAuthInfo(newAuth);
+    recordLoginEvent(nameToLogin, "ログイン");
   };
 
   const handleLogout = () => {
@@ -960,37 +1186,150 @@ export default function App() {
         localStorage.removeItem(AUTH_STORAGE_KEY);
         setAuthInfo(null);
         setSelectedLoginCandidate("");
+        setActiveTab("mypage");
       }
     });
   };
 
-  // --- タスク操作（すべてワンクッション確認付き） ---
+  // =========================================================================
+  // タスクの完了・未完了切り替え（自分だけ完了 ／ 全体完了 の選択＆ワンクッション確認）
+  // =========================================================================
   const handleToggleTask = (taskId) => {
     const target = boardState.tasks.find((t) => t.id === taskId);
     if (!target) return;
-    const nextCompleted = !target.completed;
 
-    requestConfirm({
-      title: nextCompleted ? "ToDo完了の確認" : "未完了へ戻す確認",
-      message: nextCompleted
-        ? `以下のToDoを【完了済み】にしますか？\n\n・担当：${target.who}\n・内容：${target.what}`
-        : `以下のToDoを【未完了のToDo】に戻しますか？\n\n・担当：${target.who}\n・内容：${target.what}`,
-      confirmLabel: nextCompleted ? "完了にする" : "未完了に戻す",
-      confirmColor: nextCompleted ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700",
-      onConfirm: () => {
-        const nextTasks = boardState.tasks.map((t) =>
-          t.id === taskId ? { ...t, completed: nextCompleted, updatedBy: currentUser, updatedAt: formatNow() } : t
-        );
-        commitState(
-          { ...boardState, tasks: nextTasks },
-          nextCompleted
-            ? `タスク（担当: ${target.who}）を【完了済み】に移動しました`
-            : `タスク（担当: ${target.who}）を【未完了】に戻しました`
-        );
-      }
-    });
+    const myPersonalDone = isCompletedByUser(target, currentUser);
+    const isGlobalDone = Boolean(target.completed);
+
+    // ケース1: まだ自分も全体も完了していない → 「自分だけ完了」か「全体完了」かを選択するモーダルを開く
+    if (!isGlobalDone && !myPersonalDone) {
+      const targetMembers = getTargetMembersForTask(target.who);
+      const isMyTask = isTaskForMember(target.who, currentMemberObj);
+      // 複数人対象で自分が含まれている場合はデフォルトを「自分だけ完了（self）」にする
+      const defaultOpt = isMyTask && targetMembers.length > 1 ? "self" : isMyTask ? "self" : "all";
+      setTaskCompletionModal({
+        task: target,
+        mode: "complete",
+        selectedOption: defaultOpt
+      });
+      return;
+    }
+
+    // ケース2: 自分だけ完了している（全体はまだ未完了）→「未完了（マイToDo）に戻す」か「全体も完了にする」かを選択
+    if (!isGlobalDone && myPersonalDone) {
+      setTaskCompletionModal({
+        task: target,
+        mode: "uncomplete_personal",
+        selectedOption: "revert_self"
+      });
+      return;
+    }
+
+    // ケース3: タスク全体が完了済み（isGlobalDone === true）→ 未完了（ToDo）に戻すか選択
+    if (isGlobalDone) {
+      setTaskCompletionModal({
+        task: target,
+        mode: "uncomplete_global",
+        selectedOption: "revert_all"
+      });
+    }
   };
 
+  // 完了・未完了モーダルで選択した内容を、さらにワンクッション確認のうえで実行
+  const executeTaskCompletionChoice = () => {
+    if (!taskCompletionModal) return;
+    const { task, selectedOption } = taskCompletionModal;
+    setTaskCompletionModal(null);
+
+    if (selectedOption === "self") {
+      // 自分だけ完了にする（ワンクッション確認）
+      requestConfirm({
+        title: "【自分だけ完了】の最終確認",
+        message: `以下のToDoを「${currentUser}（自分）だけ完了」にしますか？\n\n・マイページの「未完了ToDo」から消え、マイページの「完了済み」へ移動します。\n・全体のToDoリストには残り、詳細画面の「個人で完了した人リスト」にあなたの名前が記録されます。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "自分だけ完了にする",
+        confirmColor: "bg-indigo-600 hover:bg-indigo-700",
+        onConfirm: () => {
+          const existingList = normalizeCompletedBy(task.completedBy).filter((e) => e.name !== currentUser);
+          const nextCompletedBy = [...existingList, { name: currentUser, time: formatNow() }];
+          const nextTasks = boardState.tasks.map((t) =>
+            t.id === task.id
+              ? { ...t, completedBy: nextCompletedBy, updatedBy: currentUser, updatedAt: formatNow() }
+              : t
+          );
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）を【個人完了（${currentUser}）】にしました`
+          );
+        }
+      });
+    } else if (selectedOption === "all") {
+      // タスク全体を完了にする（ワンクッション確認）
+      requestConfirm({
+        title: "【全員分（全体）を完了】の最終確認",
+        message: `以下のToDoを「全員分（タスク全体）完了」にしますか？\n\n・全体のToDoリストおよび全員のマイページで「完了済み」へ移動します。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "タスク全体を完了にする",
+        confirmColor: "bg-emerald-600 hover:bg-emerald-700",
+        onConfirm: () => {
+          const existingList = normalizeCompletedBy(task.completedBy);
+          const hasMe = existingList.some((e) => e.name === currentUser);
+          const nextCompletedBy = hasMe
+            ? existingList
+            : [...existingList, { name: currentUser, time: formatNow() }];
+          const nextTasks = boardState.tasks.map((t) =>
+            t.id === task.id
+              ? { ...t, completed: true, completedBy: nextCompletedBy, updatedBy: currentUser, updatedAt: formatNow() }
+              : t
+          );
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）を【全体完了】に移動しました`
+          );
+        }
+      });
+    } else if (selectedOption === "revert_self") {
+      // 自分の個人完了を取り消してマイToDo（未完了）に戻す（ワンクッション確認）
+      requestConfirm({
+        title: "【マイToDo（未完了）へ戻す】最終確認",
+        message: `「${currentUser}」の個人完了を取り消して、マイページの未完了ToDoリストに戻しますか？\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "未完了ToDoに戻す",
+        confirmColor: "bg-blue-600 hover:bg-blue-700",
+        onConfirm: () => {
+          const nextCompletedBy = normalizeCompletedBy(task.completedBy).filter((e) => e.name !== currentUser);
+          const nextTasks = boardState.tasks.map((t) =>
+            t.id === task.id
+              ? { ...t, completed: false, completedBy: nextCompletedBy, updatedBy: currentUser, updatedAt: formatNow() }
+              : t
+          );
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）の個人完了を取り消し、【未完了ToDo】に戻しました`
+          );
+        }
+      });
+    } else if (selectedOption === "revert_all") {
+      // タスク全体の完了を取り消して全体の未完了ToDoに戻す（ワンクッション確認）
+      requestConfirm({
+        title: "【タスク全体を未完了ToDoへ戻す】最終確認",
+        message: `以下の完了済みタスクを、全体の【やるべきことリスト（未完了ToDo）】に戻しますか？\n（※自分自身の個人完了チェックもあわせて解除されます）\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "未完了ToDoに戻す",
+        confirmColor: "bg-blue-600 hover:bg-blue-700",
+        onConfirm: () => {
+          const nextCompletedBy = normalizeCompletedBy(task.completedBy).filter((e) => e.name !== currentUser);
+          const nextTasks = boardState.tasks.map((t) =>
+            t.id === task.id
+              ? { ...t, completed: false, completedBy: nextCompletedBy, updatedBy: currentUser, updatedAt: formatNow() }
+              : t
+          );
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）を【やるべきこと（未完了）】に戻しました`
+          );
+        }
+      });
+    }
+  };
+
+  // --- 新規タスク追加・編集・削除 ---
   const handleAddTask = (isCompleted = false) => {
     const what = newTaskWhat.trim();
     if (!what) {
@@ -1016,6 +1355,7 @@ export default function App() {
           what,
           importance: Number(newTaskImportance) || 0,
           completed: isCompleted,
+          completedBy: [],
           updatedBy: currentUser,
           updatedAt: formatNow()
         };
@@ -1465,7 +1805,9 @@ export default function App() {
       arr.map((t) => {
         const imp = Number(t.importance) || 0;
         const impLabel = imp > 0 ? `★${imp}` : "-";
-        return `<tr><td style="text-align:center;width:32pt;">${symbol}</td><td style="text-align:center;width:40pt;font-weight:bold;">${impLabel}</td><td style="font-weight:bold;width:105pt;">${esc(t.who)}</td><td style="width:90pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`;
+        const pDone = normalizeCompletedBy(t.completedBy).map((e) => e.name).join(", ");
+        const pDoneHtml = pDone ? `<br><span style="color:#2e7d32;font-size:8.5pt;">[個人完了: ${esc(pDone)}]</span>` : "";
+        return `<tr><td style="text-align:center;width:32pt;">${symbol}</td><td style="text-align:center;width:40pt;font-weight:bold;">${impLabel}</td><td style="font-weight:bold;width:105pt;">${esc(t.who)}${pDoneHtml}</td><td style="width:90pt;">${esc(t.when)}</td><td>${esc(t.what)}</td></tr>`;
       }).join("");
 
     const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -1509,14 +1851,27 @@ export default function App() {
       return matchWho && matchImp && matchQ;
     };
 
+    // 全体リスト（t.completed のみで未完了/完了を区分）
     let todos = boardState.tasks.filter((t) => !t.completed && matchTask(t));
     let dones = boardState.tasks.filter((t) => t.completed && matchTask(t));
-    let myTodos = boardState.tasks.filter(
-      (t) => !t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q))
-    );
-    let myDones = boardState.tasks.filter(
-      (t) => t.completed && isTaskForMember(t.who, currentMemberObj) && matchImportanceFilter(t.importance)
-    );
+
+    // マイページリスト（「自分だけ完了」にしたタスクはマイToDoから消え、マイ完了済みに移動する）
+    let myTodos = boardState.tasks.filter((t) => {
+      const forMe = isTaskForMember(t.who, currentMemberObj);
+      if (!forMe) return false;
+      const doneForMe = Boolean(t.completed) || isCompletedByUser(t, currentUser);
+      if (doneForMe) return false;
+      return matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q));
+    });
+
+    let myDones = boardState.tasks.filter((t) => {
+      const forMe = isTaskForMember(t.who, currentMemberObj);
+      const doneByMe = isCompletedByUser(t, currentUser);
+      if (!forMe && !doneByMe) return false;
+      const doneForMe = Boolean(t.completed) || doneByMe;
+      if (!doneForMe) return false;
+      return matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q));
+    });
 
     if (todoSortMode !== "manual") {
       todos = [...todos].sort((a, b) => compareItems(a, b, todoSortMode));
@@ -1529,24 +1884,38 @@ export default function App() {
 
     const decCount = boardState.decisions.reduce((acc, c) => acc + c.items.length, 0);
     return { todoList: todos, doneList: dones, myTodoList: myTodos, myDoneList: myDones, totalDecisions: decCount };
-  }, [boardState, searchQuery, filterWho, filterImportance, currentMemberObj, todoSortMode, doneSortMode]);
+  }, [boardState, searchQuery, filterWho, filterImportance, currentMemberObj, currentUser, todoSortMode, doneSortMode]);
 
   const allUncompletedCount = boardState.tasks.filter((t) => !t.completed).length;
   const allCompletedCount = boardState.tasks.filter((t) => t.completed).length;
   const hasActiveFilter = Boolean(searchQuery || filterWho !== "ALL" || filterImportance !== "ALL");
 
-  // --- タスクカード（長文「…」のタップ展開 ＆ 詳細ウィンドウ表示対応） ---
-  const renderTaskCard = (t) => {
+  // メンバー別の最終ログイン状況集計（管理者用）
+  const memberLastLoginMap = useMemo(() => {
+    const map = {};
+    for (const log of boardState.loginLogs || []) {
+      if (log.user && !map[log.user]) {
+        map[log.user] = log;
+      }
+    }
+    return map;
+  }, [boardState.loginLogs]);
+
+  // --- タスクカード（個人完了者バッジ ＆ 詳細展開時の個人完了リスト表示対応） ---
+  const renderTaskCard = (t, isMyPageContext = false) => {
     const imp = Number(t.importance) || 0;
     const isLong = isLongContent(t.what);
     const isExpanded = Boolean(expandedItemIds[t.id]);
+    const personalDoneList = normalizeCompletedBy(t.completedBy);
+    const myPersonalDone = isCompletedByUser(t, currentUser);
+    const isCheckedVisually = isMyPageContext ? (Boolean(t.completed) || myPersonalDone) : Boolean(t.completed);
 
     return (
       <div
         key={t.id}
         className={`border rounded-2xl p-4 transition shadow-2xs flex items-start gap-3 ${
-          t.completed
-            ? "bg-slate-50 border-slate-200 opacity-85"
+          isCheckedVisually
+            ? "bg-emerald-50/30 border-emerald-200"
             : imp === 5
             ? "bg-rose-50/40 border-rose-200"
             : imp === 4
@@ -1558,21 +1927,33 @@ export default function App() {
           type="button"
           onClick={() => handleToggleTask(t.id)}
           className={`mt-0.5 p-0.5 transition shrink-0 ${
-            t.completed ? "text-emerald-600 hover:text-slate-500" : "text-slate-300 hover:text-emerald-600"
+            isCheckedVisually
+              ? "text-emerald-600 hover:text-slate-500"
+              : myPersonalDone
+              ? "text-indigo-600 hover:text-emerald-600"
+              : "text-slate-300 hover:text-emerald-600"
           }`}
-          title={t.completed ? "未完了に戻す" : "完了にする"}
+          title={
+            isCheckedVisually
+              ? "クリックして未完了（ToDo）に戻す（確認あり）"
+              : "クリックして完了（自分だけ完了 / 全体完了）を選択"
+          }
         >
-          {t.completed ? <CheckCircle2 size={24} /> : <Circle size={24} strokeWidth={2} />}
+          {isCheckedVisually || myPersonalDone ? (
+            <CheckCircle2 size={24} />
+          ) : (
+            <Circle size={24} strokeWidth={2} />
+          )}
         </button>
 
         <div className="flex-1 min-w-0 space-y-2">
-          {/* 上段：バッジ（折り返し表示で切れない）と操作ボタン */}
+          {/* 上段：バッジと操作ボタン */}
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               <ImportanceBadge importance={t.importance} />
               <span
                 className={`font-bold text-xs px-2.5 py-1 rounded-lg break-words ${
-                  t.completed ? "bg-slate-200 text-slate-700" : "bg-indigo-50 text-indigo-900"
+                  t.completed ? "bg-emerald-100 text-emerald-900" : "bg-indigo-50 text-indigo-900"
                 }`}
               >
                 👤 {t.who}
@@ -1580,6 +1961,11 @@ export default function App() {
               <span className="bg-amber-50 text-amber-900 border border-amber-200/80 font-bold text-xs px-2.5 py-1 rounded-lg break-words">
                 ⏰ {t.when}
               </span>
+              {!t.completed && myPersonalDone && (
+                <span className="bg-emerald-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full">
+                  ✓ 自分は完了済（全体は未完了）
+                </span>
+              )}
             </div>
 
             {/* 操作ボタン */}
@@ -1588,7 +1974,7 @@ export default function App() {
                 type="button"
                 onClick={() => setDetailModalItem({ type: "task", data: t })}
                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg"
-                title="詳細ウィンドウで全文を見る"
+                title="詳細・個人完了した人リストを見る"
               >
                 <Maximize2 size={14} />
               </button>
@@ -1627,7 +2013,29 @@ export default function App() {
             </div>
           </div>
 
-          {/* 下段：本文（長文のときは2行＋「…」で表示し、タップで全文展開！） */}
+          {/* 個人完了しているメンバーがいる場合のサマリー表示 */}
+          {personalDoneList.length > 0 && (
+            <div
+              onClick={() => setDetailModalItem({ type: "task", data: t })}
+              className="flex flex-wrap items-center gap-1.5 bg-emerald-50/80 border border-emerald-200 px-3 py-1.5 rounded-xl cursor-pointer hover:bg-emerald-100/70 transition"
+            >
+              <UserCheck size={14} className="text-emerald-700 shrink-0" />
+              <span className="text-xs font-bold text-emerald-900">
+                個人完了済 ({personalDoneList.length}名):
+              </span>
+              {personalDoneList.map((entry) => (
+                <span
+                  key={entry.name}
+                  className="bg-white text-emerald-800 border border-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-md"
+                >
+                  ✓ {entry.name}
+                </span>
+              ))}
+              <span className="text-[11px] text-emerald-700 underline ml-auto">詳細を見る</span>
+            </div>
+          )}
+
+          {/* 下段：本文（タップで展開または詳細ウィンドウを開く） */}
           <div
             onClick={() => {
               if (isLong) toggleExpandItem(t.id);
@@ -1644,10 +2052,29 @@ export default function App() {
             </p>
           </div>
 
-          {/* 長文時の「▼ 全文・詳細を開く」ボタン ＆ 詳細ウィンドウボタン */}
+          {/* 展開時に個人完了リストもその場で表示 */}
+          {isExpanded && personalDoneList.length > 0 && (
+            <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 space-y-1.5">
+              <div className="text-xs font-bold text-emerald-900">
+                ✅ このToDoを個人で完了した人リスト（{personalDoneList.length}名）
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {personalDoneList.map((entry) => (
+                  <span
+                    key={entry.name}
+                    className="bg-white border border-emerald-200 text-emerald-900 text-xs font-bold px-2.5 py-1 rounded-lg"
+                  >
+                    ✓ {entry.name} {entry.time && <span className="text-[10px] text-slate-400">({entry.time})</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* アクションバー（全文開閉・詳細表示・完了状態の切り替えボタン） */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-            {isLong ? (
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isLong && (
                 <button
                   type="button"
                   onClick={() => toggleExpandItem(t.id)}
@@ -1665,18 +2092,26 @@ export default function App() {
                     </>
                   )}
                 </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDetailModalItem({ type: "task", data: t })}
+                className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+              >
+                <Maximize2 size={12} />
+                <span>詳細・完了者一覧</span>
+              </button>
+              {isCheckedVisually && (
                 <button
                   type="button"
-                  onClick={() => setDetailModalItem({ type: "task", data: t })}
-                  className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                  onClick={() => handleToggleTask(t.id)}
+                  className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
                 >
-                  <Maximize2 size={12} />
-                  <span>拡大表示</span>
+                  <RotateCcw size={12} />
+                  <span>未完了(ToDo)に戻す</span>
                 </button>
-              </div>
-            ) : (
-              <span />
-            )}
+              )}
+            </div>
 
             {t.updatedBy && t.updatedBy !== "初期データ" && (
               <div className="text-[11px] text-slate-400 ml-auto">
@@ -1788,7 +2223,7 @@ export default function App() {
   );
 
   // =========================================================================
-  // 未ログイン時のログイン画面（役職名が「…」で切れないよう折り返し表示）
+  // 未ログイン時のログイン画面
   // =========================================================================
   if (!authInfo) {
     return (
@@ -1818,7 +2253,9 @@ export default function App() {
                       : "bg-slate-50 text-slate-800 border-slate-200 hover:bg-indigo-50"
                   }`}
                 >
-                  <div className="font-bold text-sm break-words">{member.name}</div>
+                  <div className="font-bold text-sm break-words flex items-center gap-1">
+                    <span>{member.name}</span>
+                  </div>
                   <div className={`text-[10px] leading-snug break-words mt-1 ${selected ? "text-indigo-100" : "text-slate-500"}`}>
                     {member.roles.join(" / ")}
                   </div>
@@ -1862,6 +2299,12 @@ export default function App() {
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full shrink-0">
                   {syncStatus === "synced" ? "🟢 同期済" : syncStatus === "saving" ? "⚡ 同期中" : "🟡 保存済"}
                 </span>
+                {isAdmin && (
+                  <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                    <Crown size={11} />
+                    <span>管理者</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -1900,18 +2343,23 @@ export default function App() {
 
       <main className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         {/* =================================================================== */}
-        {/* タブ1: マイページ */}
+        {/* タブ1: マイページ（未完了ToDo ／ マイ完了済み ／ 自由メモ） */}
         {/* =================================================================== */}
         {activeTab === "mypage" && (
           <div className="space-y-4">
             <div className="bg-white rounded-3xl p-5 shadow-2xs border border-slate-200 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                    👤 {currentUser} のマイページ
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>👤 {currentUser} のマイページ</span>
+                    {isAdmin && (
+                      <span className="text-xs bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full font-bold">
+                        👑 管理者権限
+                      </span>
+                    )}
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    担当役職・自分宛てのToDo・個人メモを確認できます
+                    あなたの正確な担当役職・本人宛てのToDoのみが抽出されます
                   </p>
                 </div>
                 <button
@@ -1946,28 +2394,38 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex bg-slate-200/80 p-1 rounded-2xl">
+            {/* マイページ内の3サブタブ（未完了ToDo ／ マイ完了済み ／ 自由メモ） */}
+            <div className="flex bg-slate-200/80 p-1 rounded-2xl gap-1">
               <button
                 type="button"
                 onClick={() => setMyPageSubTab("todo")}
-                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition ${
                   myPageSubTab === "todo" ? "bg-white text-indigo-700 shadow-xs" : "text-slate-600"
                 }`}
               >
-                ✅ 自分宛てのToDo ({myTodoList.length}件)
+                🔥 マイToDo ({myTodoList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMyPageSubTab("done")}
+                className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+                  myPageSubTab === "done" ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600"
+                }`}
+              >
+                ✅ マイ完了済 ({myDoneList.length})
               </button>
               <button
                 type="button"
                 onClick={() => setMyPageSubTab("memo")}
-                className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition ${
+                className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition ${
                   myPageSubTab === "memo" ? "bg-white text-amber-700 shadow-xs" : "text-slate-600"
                 }`}
               >
-                📌 個人の自由メモ ({userMemoList.length}件)
+                📌 自由メモ ({userMemoList.length})
               </button>
             </div>
 
-            {myPageSubTab === "todo" ? (
+            {myPageSubTab === "todo" && (
               <div className="space-y-3">
                 {renderCompactControlBar({
                   sortMode: todoSortMode,
@@ -1979,34 +2437,41 @@ export default function App() {
                 <div className="space-y-2.5">
                   {myTodoList.length === 0 ? (
                     <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
-                      現在、あなたの名前・役職宛ての未完了ToDoはありません 🎉
+                      現在、あなたの名前・担当役職宛ての未完了ToDoはありません 🎉
                     </div>
                   ) : (
-                    myTodoList.map((t) => renderTaskCard(t))
+                    myTodoList.map((t) => renderTaskCard(t, true))
                   )}
                 </div>
-
-                {myDoneList.length > 0 && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowCompletedInMyPage(!showCompletedInMyPage)}
-                      className="w-full py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
-                    >
-                      {showCompletedInMyPage
-                        ? "▲ 完了済みの自分宛てToDoを隠す"
-                        : `▼ 完了済みの自分宛てToDoを表示 (${myDoneList.length}件)`}
-                    </button>
-                    {showCompletedInMyPage && (
-                      <div className="space-y-2.5 mt-3">
-                        {myDoneList.map((t) => renderTaskCard(t))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
-            ) : (
-              /* 自由メモタブ（長文の開閉・詳細表示対応） */
+            )}
+
+            {myPageSubTab === "done" && (
+              <div className="space-y-3">
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-900">
+                  💡 <strong>「自分だけ完了」</strong>または<strong>「全体完了」</strong>にしたあなたのToDoがここに集まります。左の緑チェックまたは「未完了(ToDo)に戻す」ボタンを押すと、確認のうえでマイToDoに戻せます。
+                </div>
+
+                {renderCompactControlBar({
+                  sortMode: doneSortMode,
+                  setSortMode: setDoneSortMode,
+                  onPermanentSort: null,
+                  includeWhoSort: false
+                })}
+
+                <div className="space-y-2.5">
+                  {myDoneList.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
+                      完了済みのマイToDoはまだありません
+                    </div>
+                  ) : (
+                    myDoneList.map((t) => renderTaskCard(t, true))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {myPageSubTab === "memo" && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200">
                   <span className="text-xs font-bold text-slate-600">
@@ -2154,7 +2619,7 @@ export default function App() {
                   ✅ 全体のToDo・完了済みリスト
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  未完了 {allUncompletedCount}件 ／ 完了済み {allCompletedCount}件（長文はタップで全文展開）
+                  複数人タスクは「自分だけ完了」と「全体完了」を選べます。詳細に個人完了者一覧が表示されます
                 </p>
               </div>
               <button
@@ -2184,7 +2649,7 @@ export default function App() {
                   taskSubTab === "done" ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600"
                 }`}
               >
-                ✓ すでに終わっていること ({doneList.length}件)
+                ✓ 全体完了済み ({doneList.length}件)
               </button>
             </div>
 
@@ -2202,7 +2667,7 @@ export default function App() {
                       該当する未完了のToDoはありません 🎉
                     </div>
                   ) : (
-                    todoList.map((t) => renderTaskCard(t))
+                    todoList.map((t) => renderTaskCard(t, false))
                   )}
                 </div>
               </div>
@@ -2220,7 +2685,7 @@ export default function App() {
                       完了済みのタスクはありません
                     </div>
                   ) : (
-                    doneList.map((t) => renderTaskCard(t))
+                    doneList.map((t) => renderTaskCard(t, false))
                   )}
                 </div>
               </div>
@@ -2229,7 +2694,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ3: 今まで決まったこと（見出し折り返し＆長文タップ展開対応） */}
+        {/* タブ3: 今まで決まったこと */}
         {/* =================================================================== */}
         {activeTab === "decisions" && (
           <div className="space-y-4">
@@ -2297,7 +2762,6 @@ export default function App() {
 
                 return (
                   <div key={cat.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xs">
-                    {/* アコーディオンヘッダー（スマホでも「…」で切れずに全文折り返し表示） */}
                     <div
                       onClick={() => setCollapsedCats({ ...collapsedCats, [cat.id]: !collapsedCats[cat.id] })}
                       className="p-4 bg-slate-50/70 hover:bg-slate-100/70 cursor-pointer flex items-start justify-between gap-2 transition"
@@ -2354,7 +2818,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* カテゴリ内の項目リスト */}
                     {!isCollapsed && (
                       <div className="p-4 space-y-2.5 border-t border-slate-100">
                         {visibleItems.length === 0 ? (
@@ -2436,7 +2899,6 @@ export default function App() {
                                   </div>
                                 </div>
 
-                                {/* 決定事項の本文（長文はタップで開閉） */}
                                 <div
                                   onClick={() => {
                                     if (isLong) toggleExpandItem(item.id);
@@ -2506,12 +2968,12 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ4: 履歴・出力・設定 */}
+        {/* タブ4: 出力・管理（変更履歴＆ログイン履歴は管理者「小林秀星」のみ表示） */}
         {/* =================================================================== */}
         {activeTab === "logs" && (
           <div className="space-y-4">
             <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
-              <h2 className="text-base font-bold text-slate-900">⚙️ 出力・役職表・データ管理</h2>
+              <h2 className="text-base font-bold text-slate-900">📄 ファイル出力・役職表</h2>
               <div className="flex flex-wrap gap-2.5">
                 <button
                   type="button"
@@ -2529,45 +2991,160 @@ export default function App() {
                   <Shield size={15} />
                   <span>全体の役職・担当表を見る</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    requestConfirm({
-                      title: "初期状態へのリセット確認",
-                      message: "本当にすべてのToDo・決定事項データを初期状態にリセットしますか？",
-                      confirmLabel: "リセットする",
-                      confirmColor: "bg-red-600 hover:bg-red-700",
-                      onConfirm: () => commitState(INITIAL_STATE, "データを初期状態にリセットしました")
-                    });
-                  }}
-                  className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition ml-auto"
-                >
-                  <RotateCcw size={14} />
-                  <span>初期状態に戻す</span>
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      requestConfirm({
+                        title: "初期状態へのリセット確認（管理者専用）",
+                        message: "本当にすべてのToDo・決定事項データを初期状態にリセットしますか？",
+                        confirmLabel: "リセットする",
+                        confirmColor: "bg-red-600 hover:bg-red-700",
+                        onConfirm: () => commitState(INITIAL_STATE, "データを初期状態にリセットしました")
+                      });
+                    }}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition ml-auto"
+                  >
+                    <RotateCcw size={14} />
+                    <span>初期状態に戻す</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <History className="text-indigo-600" size={20} />
-                <h3 className="text-base font-bold text-slate-900">みんなの編集・変更履歴</h3>
-              </div>
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-                {(boardState.logs || []).map((log) => (
-                  <div
-                    key={log.id}
-                    className="text-xs flex items-start justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-slate-50 border border-slate-100"
-                  >
-                    <div className="break-words">
-                      <span className="font-bold text-indigo-700 mr-1.5">[{log.user}]</span>
-                      <span className="text-slate-700">{log.action}</span>
+            {/* 管理者（小林秀星）専用のログイン履歴＆変更履歴パネル */}
+            {isAdmin ? (
+              <div className="bg-white rounded-3xl p-5 border-2 border-amber-300 shadow-xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Crown className="text-amber-500" size={22} />
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        管理者専用パネル（{ADMIN_USER} のみ閲覧可能）
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        誰がいつログインしたか・誰が何を変更したかを確認できます
+                      </p>
                     </div>
-                    <span className="text-[11px] text-slate-400 shrink-0 font-mono">{log.time}</span>
                   </div>
-                ))}
+                </div>
+
+                {/* ログイン履歴 / 変更履歴 切り替えタブ */}
+                <div className="flex bg-slate-100 p-1 rounded-2xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setAdminLogSubTab("login")}
+                    className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition ${
+                      adminLogSubTab === "login"
+                        ? "bg-white text-indigo-700 shadow-xs"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    <KeyRound size={15} />
+                    <span>ログイン履歴 ({(boardState.loginLogs || []).length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminLogSubTab("edit")}
+                    className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition ${
+                      adminLogSubTab === "edit"
+                        ? "bg-white text-indigo-700 shadow-xs"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    <History size={15} />
+                    <span>編集・変更履歴 ({(boardState.logs || []).length})</span>
+                  </button>
+                </div>
+
+                {adminLogSubTab === "login" ? (
+                  <div className="space-y-4">
+                    {/* 全20名の最終ログイン状況サマリー */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
+                      <div className="text-xs font-bold text-slate-700">
+                        👥 幹部代20名の最終ログイン日時一覧
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {KANBU_ROSTER.map((m) => {
+                          const lastLog = memberLastLoginMap[m.name];
+                          return (
+                            <div
+                              key={m.name}
+                              className={`p-2.5 rounded-xl border text-xs ${
+                                lastLog
+                                  ? "bg-white border-emerald-200"
+                                  : "bg-slate-100/70 border-slate-200 opacity-70"
+                              }`}
+                            >
+                              <div className="font-bold text-slate-900 flex items-center justify-between">
+                                <span>{m.name}</span>
+                                {lastLog && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                              </div>
+                              <div className="text-[11px] mt-0.5 text-slate-500 font-mono">
+                                {lastLog ? `最終: ${lastLog.time}` : "未ログイン"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 時系列のログイン履歴リスト */}
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                      <div className="text-xs font-bold text-slate-600">
+                        🕒 時系列ログイン・アクセス記録
+                      </div>
+                      {(boardState.loginLogs || []).length === 0 ? (
+                        <div className="text-xs text-slate-400 py-4 text-center">
+                          まだログイン履歴がありません
+                        </div>
+                      ) : (
+                        (boardState.loginLogs || []).map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="text-xs flex items-center justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="bg-indigo-600 text-white font-bold px-2.5 py-0.5 rounded-lg">
+                                👤 {entry.user}
+                              </span>
+                              <span className="text-slate-700 font-medium">
+                                {entry.type || "ログイン"}しました
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-mono shrink-0">
+                              {entry.time}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* 編集・変更履歴リスト（管理者のみ） */
+                  <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+                    {(boardState.logs || []).map((log) => (
+                      <div
+                        key={log.id}
+                        className="text-xs flex items-start justify-between gap-2 py-2.5 px-3.5 rounded-2xl bg-slate-50 border border-slate-100"
+                      >
+                        <div className="break-words">
+                          <span className="font-bold text-indigo-700 mr-1.5">[{log.user}]</span>
+                          <span className="text-slate-700">{log.action}</span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 shrink-0 font-mono">{log.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-5 border border-slate-200 text-center space-y-1">
+                <div className="text-xs font-bold text-slate-500">
+                  🔒 変更履歴・ログイン履歴は管理者（{ADMIN_USER}）専用です
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -2581,7 +3158,11 @@ export default function App() {
             { id: "mypage", label: `マイページ (${myTodoList.length})`, icon: User },
             { id: "tasks", label: `全体ToDo (${allUncompletedCount})`, icon: CheckSquare },
             { id: "decisions", label: `決定事項 (${totalDecisions})`, icon: FileText },
-            { id: "logs", label: "履歴・出力", icon: History }
+            {
+              id: "logs",
+              label: isAdmin ? "👑 管理・履歴" : "出力・役職表",
+              icon: isAdmin ? Crown : Shield
+            }
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -2603,7 +3184,214 @@ export default function App() {
       </nav>
 
       {/* =================================================================== */}
-      {/* モーダル0: 全文・詳細表示ウィンドウ（スマホでも一切省略なしで読める） */}
+      {/* モーダルA: 複数人ToDoの「自分だけ完了 ／ 全体完了 ／ 未完了に戻す」選択ウィンドウ */}
+      {/* =================================================================== */}
+      {taskCompletionModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <CheckCircle2 className="text-emerald-600" size={20} />
+                <span>
+                  {taskCompletionModal.mode === "complete"
+                    ? "ToDo完了方法の選択"
+                    : "ToDoへ戻す（または全体完了）"}
+                </span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTaskCompletionModal(null)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs space-y-1">
+              <div className="font-bold text-indigo-900 break-words">
+                👤 担当: {taskCompletionModal.task.who}
+              </div>
+              <div className="text-slate-700 line-clamp-3 whitespace-pre-wrap break-words">
+                {taskCompletionModal.task.what}
+              </div>
+            </div>
+
+            {taskCompletionModal.mode === "complete" && (
+              <div className="space-y-2.5">
+                <p className="text-xs font-bold text-slate-700">
+                  自分だけ完了にするか、全員分（タスク全体）を完了にするか選択してください：
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskCompletionModal({ ...taskCompletionModal, selectedOption: "self" })
+                  }
+                  className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                    taskCompletionModal.selectedOption === "self"
+                      ? "border-indigo-600 bg-indigo-50/70"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mt-0.5">
+                    {taskCompletionModal.selectedOption === "self" ? (
+                      <CheckCircle2 size={20} className="text-indigo-600" />
+                    ) : (
+                      <Circle size={20} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      🙋‍♂️ 自分（{currentUser}）だけ完了にする
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      マイページの未完了ToDoから消え、マイページの「完了済み」に移ります。他のメンバーの未完了ToDoには残り、詳細画面にあなたが完了したことが記録されます。
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskCompletionModal({ ...taskCompletionModal, selectedOption: "all" })
+                  }
+                  className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                    taskCompletionModal.selectedOption === "all"
+                      ? "border-emerald-600 bg-emerald-50/70"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mt-0.5">
+                    {taskCompletionModal.selectedOption === "all" ? (
+                      <CheckCircle2 size={20} className="text-emerald-600" />
+                    ) : (
+                      <Circle size={20} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      🌐 全員分（タスク全体）を完了にする
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      タスクそのものがすべて終わった場合に使います。全体のToDoリストから完了済みへ移動します。
+                    </p>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {taskCompletionModal.mode === "uncomplete_personal" && (
+              <div className="space-y-2.5">
+                <p className="text-xs font-bold text-slate-700">
+                  あなたは現在このToDoを「個人完了」しています。操作を選択してください：
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskCompletionModal({ ...taskCompletionModal, selectedOption: "revert_self" })
+                  }
+                  className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                    taskCompletionModal.selectedOption === "revert_self"
+                      ? "border-blue-600 bg-blue-50/70"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mt-0.5">
+                    {taskCompletionModal.selectedOption === "revert_self" ? (
+                      <CheckCircle2 size={20} className="text-blue-600" />
+                    ) : (
+                      <Circle size={20} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      ↩️ 自分の完了を取り消してマイToDo（未完了）に戻す
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      マイページの「マイ完了済」から「マイToDo（未完了）」に戻します。
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskCompletionModal({ ...taskCompletionModal, selectedOption: "all" })
+                  }
+                  className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                    taskCompletionModal.selectedOption === "all"
+                      ? "border-emerald-600 bg-emerald-50/70"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mt-0.5">
+                    {taskCompletionModal.selectedOption === "all" ? (
+                      <CheckCircle2 size={20} className="text-emerald-600" />
+                    ) : (
+                      <Circle size={20} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      🌐 全員分（タスク全体）も完了にする
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      全体のToDoリストでもこのタスクを完了済みに移動します。
+                    </p>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {taskCompletionModal.mode === "uncomplete_global" && (
+              <div className="space-y-2.5">
+                <p className="text-xs font-bold text-slate-700">
+                  このタスクは現在「全体完了」になっています。未完了（ToDo）に戻しますか？
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskCompletionModal({ ...taskCompletionModal, selectedOption: "revert_all" })
+                  }
+                  className="w-full p-3.5 rounded-2xl border-2 border-blue-600 bg-blue-50/70 text-left flex items-start gap-3"
+                >
+                  <CheckCircle2 size={20} className="text-blue-600 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      ↩️ 未完了のToDoリストに戻す
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      全体のやるべきことリスト（未完了ToDo）およびマイページの未完了ToDoに戻します。
+                    </p>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setTaskCompletionModal(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={executeTaskCompletionChoice}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm"
+              >
+                次へ（確認画面へ）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* モーダル0: 全文・詳細表示ウィンドウ（個人完了した人リスト統合表示） */}
       {/* =================================================================== */}
       {detailModalItem && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
@@ -2611,7 +3399,7 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <h3 className="font-bold text-base text-slate-900">
                 {detailModalItem.type === "task"
-                  ? "📋 ToDoの詳細・全文"
+                  ? "📋 ToDoの詳細・個人完了リスト"
                   : detailModalItem.type === "decision"
                   ? "📋 決定事項の詳細・全文"
                   : "📌 自由メモの詳細・全文"}
@@ -2625,33 +3413,98 @@ export default function App() {
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 space-y-3 pr-1">
-              {detailModalItem.type === "task" && (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    <ImportanceBadge importance={detailModalItem.data.importance} />
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                      状態: {detailModalItem.data.completed ? "✅ 完了済み" : "🔥 未完了 (やるべきこと)"}
-                    </span>
-                  </div>
-                  <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3 space-y-1.5 text-xs">
-                    <div>
-                      <span className="font-bold text-indigo-900">👤 誰が（担当）：</span>
-                      <span className="text-slate-800 break-words">{detailModalItem.data.who}</span>
+            <div className="overflow-y-auto flex-1 space-y-3.5 pr-1">
+              {detailModalItem.type === "task" && (() => {
+                const taskObj =
+                  boardState.tasks.find((x) => x.id === detailModalItem.data.id) || detailModalItem.data;
+                const personalDoneList = normalizeCompletedBy(taskObj.completedBy);
+                const targetMembers = getTargetMembersForTask(taskObj.who);
+                const doneNames = personalDoneList.map((e) => e.name);
+                const remainingMembers = targetMembers.filter((m) => !doneNames.includes(m));
+
+                return (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      <ImportanceBadge importance={taskObj.importance} />
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                        全体状態: {taskObj.completed ? "✅ 全体完了済み" : "🔥 未完了 (進行中)"}
+                      </span>
                     </div>
-                    <div>
-                      <span className="font-bold text-amber-900">⏰ いつまでに（期限）：</span>
-                      <span className="text-slate-800 break-words">{detailModalItem.data.when}</span>
+
+                    <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3.5 space-y-1.5 text-xs">
+                      <div>
+                        <span className="font-bold text-indigo-900">👤 誰が（担当）：</span>
+                        <span className="text-slate-800 break-words font-bold">{taskObj.who}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-amber-900">⏰ いつまでに（期限）：</span>
+                        <span className="text-slate-800 break-words">{taskObj.when}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                    <div className="text-xs font-bold text-slate-500 mb-1.5">📝 内容（全文）：</div>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">
-                      {detailModalItem.data.what}
-                    </p>
-                  </div>
-                </>
-              )}
+
+                    {/* 個人で完了した人リスト */}
+                    <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                          <UserCheck size={16} className="text-emerald-700" />
+                          <span>個人で完了した人リスト ({personalDoneList.length}名)</span>
+                        </span>
+                      </div>
+
+                      {personalDoneList.length === 0 ? (
+                        <div className="text-xs text-slate-500 bg-white/80 rounded-xl p-2.5 border border-emerald-100">
+                          まだ個人で完了にしたメンバーはいません
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {personalDoneList.map((entry) => (
+                            <span
+                              key={entry.name}
+                              className="bg-white border border-emerald-300 text-emerald-900 text-xs font-bold px-3 py-1 rounded-xl shadow-2xs"
+                            >
+                              ✓ {entry.name}
+                              {entry.time && (
+                                <span className="text-[10px] text-slate-400 ml-1">({entry.time})</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {targetMembers.length > 1 && !taskObj.completed && (
+                        <div className="pt-2 border-t border-emerald-200/70">
+                          <div className="text-[11px] font-bold text-slate-600 mb-1">
+                            ⏳ 未完了の対象メンバー ({remainingMembers.length}名):
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {remainingMembers.length === 0 ? (
+                              <span className="text-xs text-emerald-700 font-bold">
+                                対象メンバー全員が個人完了しています！
+                              </span>
+                            ) : (
+                              remainingMembers.map((mName) => (
+                                <span
+                                  key={mName}
+                                  className="bg-white/70 text-slate-600 border border-slate-200 text-[11px] px-2 py-0.5 rounded-md"
+                                >
+                                  {mName}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <div className="text-xs font-bold text-slate-500 mb-1.5">📝 内容（全文）：</div>
+                      <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">
+                        {taskObj.what}
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
 
               {detailModalItem.type === "decision" && (
                 <>
@@ -2700,7 +3553,7 @@ export default function App() {
                     }}
                     className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"
                   >
-                    {detailModalItem.data.completed ? "未完了に戻す" : "完了にする"}
+                    完了状態の切り替え / ToDoに戻す
                   </button>
                   <button
                     type="button"
@@ -3156,7 +4009,7 @@ export default function App() {
       )}
 
       {/* =================================================================== */}
-      {/* ワンクッション確認ダイアログ（全文スクロール確認可能） */}
+      {/* ワンクッション確認ダイアログ */}
       {/* =================================================================== */}
       {confirmDialog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
