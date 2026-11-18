@@ -14,7 +14,8 @@ import {
   Download, RotateCcw, X, Check,
   Calendar, LogOut, User, RefreshCw, AlertCircle,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Shield, Star,
-  SlidersHorizontal, Maximize2, Crown, KeyRound, UserCheck
+  SlidersHorizontal, Maximize2, Crown, KeyRound, UserCheck,
+  BookmarkPlus, BookmarkMinus, BookmarkCheck
 } from 'lucide-react';
 
 // --- Firebase Configuration (即時同期最適化) ---
@@ -44,7 +45,7 @@ try {
 
 const SYNC_COLLECTION = "kanbu_sync";
 const SYNC_DOC_ID = "board_2026_11";
-const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v8";
+const LOCAL_STORAGE_KEY = "wpb_kanbu_sync_backup_v9";
 const AUTH_STORAGE_KEY = "wpb_kanbu_sync_auth_v1";
 const LOGIN_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 1ヶ月（30日間）
 const NEW_CAT_VALUE = "__CREATE_NEW_CATEGORY__";
@@ -144,30 +145,30 @@ const FULL_ROLE_TABLE = [
 // --- 初期データ ---
 const INITIAL_STATE = {
   tasks: [
-    { id: "todo-1", createdAt: 1001, who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-2", createdAt: 1002, who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-3", createdAt: 1003, who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-4", createdAt: 1004, who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-5", createdAt: 1005, who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-6", createdAt: 1006, who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-14", createdAt: 1014, who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-15", createdAt: 1015, who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-16", createdAt: 1016, who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-17", createdAt: 1017, who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "todo-18", createdAt: 1018, who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-1", createdAt: 2001, who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-2", createdAt: 2002, who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
-    { id: "done-3", createdAt: 2003, who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
-    { id: "done-4", createdAt: 2004, who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/01" },
-    { id: "done-5", createdAt: 2005, who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "10/14" },
-    { id: "done-6", createdAt: 2006, who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, completedBy: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" }
+    { id: "todo-1", createdAt: 1001, who: "小林秀星（副部長）", when: "11/11会議後すぐ", what: "12月定例ライブでサポート出演（1曲免除対象）する人を把握するためのフォームを作成して流す。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-2", createdAt: 1002, who: "朱函悦（web,SNS）・小林秀星・動画編集に協力できる人", when: "11/11会議後すぐ", what: "学祭・講習会・新歓動画の編集（朱函悦の補助・あと2〜3名）について、小林秀星へ個別LINEで連絡する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-3", createdAt: 1003, who: "幹部代全員", when: "リンク共有後すぐ（次回会議まで）", what: "安部建人から送られるリンクの手順に従い、Zoomアカウント申請（1時間制限解除のため）を行う。また会議時のマイク環境を改善する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-4", createdAt: 1004, who: "安部建人（部長）・現幹部", when: "早急に", what: "合宿先の「ゆうげん荘」へ未返却の消毒液を送り返す。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-5", createdAt: 1005, who: "渡会啓人（ギター（パトリ））", when: "次回（来週）の会議までに確認・順次修理", what: "2スタの壊れているマーシャルキャビネット1台目の部品（約1,000〜4,000円）を購入し修理を試みる。もう1台について先輩（こたさん）に見てもらう。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-6", createdAt: 1006, who: "パートリーダー（パトリ）", when: "順次（次回会議に向けて）", what: "各パートのグループLINE等に「壊れている箇所・不安な機材・欲しい機材」のアンケートフォームを作成して流す（ドラムはハイハットの注意喚起も実施）。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-7", createdAt: 1007, who: "幹部代全員・杉原和貴（渉外）", when: "来週（次回）の幹部代会議", what: "【次回会議で議論・決定すべき持ち越し事項】\n① 2月ライブの残課題：個人のバンド数上限、過去の企画落選バンドの優先、さつまりさんのバンド受け入れ（杉原和貴が出席する回に実施）\n② ローディーの改善策：部ごとに固定するか、撤収ローディーによる次演者への声掛け、ステージ袖待機などのルール化\n③ タイムキーパーの割り振り：学祭等のタイムキーパーを1回生に振るか\n④ 台車の確保方法：文連部室のを使うか、借りるか、新規購入するか（および古い部室台車をブルーシート用等にするか）\n⑤ 各セクションの人員再配置：さつき・りさの抜けた穴埋め、舞台・格納庫・PA設営の人数不足解消（PA卓からの移動や兼任者ゆうごの稼働徹底など）（11/11幹部代）\n⑥ 学祭反省＋α", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-8", createdAt: 1008, who: "杉原和貴（渉外）", when: "11月中（180日前早割期限）", what: "5月（BlackHole）・6月（Flight）ライブの会場予約手配を進めるとともに、ライブハウス側でレンタル時間短縮（延長プラン組み合わせ等による費用圧縮）が可能か詳細条件を確認する。（10/14幹文連）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-9", createdAt: 1009, who: "溝上萌乃佳（庶務）・浦山大樹・幹文連", when: "12月定例の1週間前まで", what: "12月定例ライブ当日のチケット代（ドリチケ）回収（受付）シフトを作成する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-10", createdAt: 1010, who: "PA（設営）・照明（設営）・カメラ・機材統括", when: "順次（12月定例・次回イベントに向けて）", what: "大蛇用の箱、コード類整理用の箱、カメラケース、ベース返し（EV）、共用ピックホルダー3個、予備キャノン（長さ別5本ずつ）、六角レンチの選定・購入、および上手の横当ての修理手配を進める。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-11", createdAt: 1011, who: "浦山大樹（機材統括）", when: "次回ライブ・設営まで", what: "① PAシートのフォーマット修正（DI・同期の位置欄を追加）。\n② 先輩（けいたさん）と相談した電流不足対策（パワーディストリビューターからの電源確保）を整理・管轄する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-12", createdAt: 1012, who: "大場怜（照明（設営））", when: "次回設営まで", what: "① 暗幕固定用の透明な安全ピンを購入する。\n② 強く光る照明ライトを特定して端に配置し、各ライトに番号・印をつけて管理する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-13", createdAt: 1013, who: "安部建人（部長）・亀谷博昭（舞台）・大場怜（照明（設営））", when: "次回設営まで", what: "設営時のグリーンシートを敷く位置を安部が管理・指揮し、舞台・照明間でステージの中心位置を統一したマニュアルを作成する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-14", createdAt: 1014, who: "安部建人（部長）・杉原和貴（渉外）", when: "順次（おいおい作成・連絡）", what: "バラバラになっている3台目のマーシャルの修理について先輩（けいたさん）に連絡を取る。またボーカルエフェクターの使用スケジュール表を作成する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-15", createdAt: 1015, who: "幹文連・渉外", when: "順次", what: "3月第1週土日（3/6・3/7、府中Flight）の3月ライブについて、卒コン出演バンドの扱いや余った時間の活用方法（企画・時間延長）を検討する。（10/5幹文連）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-16", createdAt: 1016, who: "幹部代全員", when: "順次", what: "合宿の大まかな運営方針について各自考え、議論を進める。また出演キャンセル返金の細かい足切りラインを2月ライブ時等に再議論する。（10/5幹文連・11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-17", createdAt: 1017, who: "幹部代全員", when: "春学期前（4月頃）", what: "5月・6月ライブの出演希望アンケート（事前調査）の形式を検討し、5月の応募バンド不足時における企画バンド募集に備える。（10/14幹文連）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "todo-18", createdAt: 1018, who: "幹部代全員・各セクションリーダー", when: "今後の全イベント・作業時（常時）", what: "設営・撤収等の現場に遅刻せず参加し、幹部代としての仕事を徹底する。（11/11幹部代）", completed: false, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-1", createdAt: 2001, who: "幹部代全員", when: "11/06(金) 枠決め前まで【完了】", what: "枠決め・練習枠数の周知：名簿の案内と一緒に「今回は上限6枠です」という内容をLINE等で周知する。（10/14幹部代）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-2", createdAt: 2002, who: "小林秀星・亀谷博昭", when: "11/06(金) 19:00〜【完了】", what: "定例ライブ＆講習会の枠決め実施：11月6日19:00スタートで定例ライブの枠決めを先に行い、終わり次第、講習会の枠決めを実施する。（10/5・10/14議事録）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/06" },
+    { id: "done-3", createdAt: 2003, who: "安部建人・小林秀星・朱函悦", when: "10/14次回会議〜学祭期間まで【完了】", what: "新歓・SNS用「5秒動画素材」の撮影指示依頼と学祭撮影：現幹部（こたさん等）に相談して各セクションへ撮影指示を出してもらい、学祭での短尺動画素材を撮影する。（10/14幹文連→11/11時点で学祭動画の編集が進行中）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" },
+    { id: "done-4", createdAt: 2004, who: "平野春音（会計）・安部建人", when: "学祭前まで【完了】", what: "生花（幹文連向け）の準備・保管：部費（予算3万円前後、割り勘なし）で幹文連向けの花を手配し、安部建人の家へ配達・保管する（余ったら機材統括へ）。（10/5・10/14幹文連）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/01" },
+    { id: "done-5", createdAt: 2005, who: "幹文連・幹部代全員", when: "10/14会議まで【完了】", what: "5・6月ライブの会場（箱）検討と決定：10/5会議のToDoを受け、10/14幹文連会議にて「5月：BlackHole（1日間）」「6月：Flight（2日間）」に正式決定済み。（10/5・10/14幹文連）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "10/14" },
+    { id: "done-6", createdAt: 2006, who: "幹文連・幹部代全員", when: "12月まで（11/11会議で実施済み）【完了】", what: "出演キャンセル時の対応・返金規定の全体投票：10/5・10/14会議のToDoを受け、11/11第1回幹部代会議で全体投票を実施。「15位以下の代替バンド繰り上げ」「一旦全額徴収（返金有無は事後会議で判断）」に正式決定済み。（10/5・10/14・11/11議事録）", completed: true, completedBy: [], manualAddedUsers: [], manualExcludedUsers: [], importance: 0, updatedBy: "初期データ", updatedAt: "11/11" }
   ],
   decisions: [
     {
@@ -266,11 +267,10 @@ const formatDateLabel = (yyyyMmDd) => {
 };
 
 // ============================================================================
-// 厳密なマイページ対象判定ロジック（他の役職・名前の誤混入を完全に防止）
+// 自動判定ロジック（名前・役職に基づく厳密なマイページ対象判定）
 // ============================================================================
 const isTaskForMember = (taskWho, memberObj) => {
   if (!taskWho || !memberObj) return false;
-  // スペース正規化
   const raw = String(taskWho).replace(/\s+/g, "");
 
   // 1. 全体・全員対象のキーワード
@@ -296,45 +296,36 @@ const isTaskForMember = (taskWho, memberObj) => {
     }
   }
 
-  // 4. グループ名の一致判定（「幹部代」「現幹部」と「幹部」を厳密に区別）
+  // 4. グループ名の一致判定
   const textWithoutKanbudai = raw
     .replace(/幹部代全員/g, "")
     .replace(/次期幹部代/g, "")
     .replace(/幹部代/g, "")
     .replace(/現幹部/g, "");
 
-  // 「幹部」単独指定（部長・副部長・会計・渉外・総務の5名のみ）
   if (memberObj.isKanbu && textWithoutKanbudai.includes("幹部")) {
     return true;
   }
-
-  // 「幹文連」指定（幹部5名 ＋ 文連2名のみ）
   if ((memberObj.isKanbu || memberObj.isBunren) && raw.includes("幹文連")) {
     return true;
   }
-
-  // 「パートリーダー」「パトリ」指定（パトリ5名のみ）
   if (memberObj.isPatri && (raw.includes("パートリーダー") || raw.includes("パトリ"))) {
     return true;
   }
-
-  // 「セクションリーダー」「各責任者」指定
   if (memberObj.isSectionLeader && (raw.includes("セクションリーダー") || raw.includes("各責任者"))) {
     return true;
   }
 
-  // 5. 各役職の厳密一致判定（部分一致による誤爆を除外してから判定）
+  // 5. 各役職の厳密一致判定
   const memberRoles = memberObj.roles || [];
 
   for (const role of memberRoles) {
     if (role === "部長") {
-      // 「副部長」を消した上で「部長」が残っている場合のみ部長にマッチ
       const withoutFukubucho = raw.replace(/副部長/g, "");
       if (withoutFukubucho.includes("部長")) return true;
     } else if (role === "副部長") {
       if (raw.includes("副部長")) return true;
     } else if (role === "カメラ") {
-      // 「ビデオカメラ」を消した上で「カメラ」が残っている場合のみカメラにマッチ
       const withoutVideoCamera = raw.replace(/ビデオカメラ/g, "");
       if (withoutVideoCamera.includes("カメラ")) return true;
     } else if (role === "ビデオカメラ") {
@@ -343,7 +334,6 @@ const isTaskForMember = (taskWho, memberObj) => {
       if (raw.includes("照明（設営）") || raw.includes("照明(設営)") || raw.includes("照明設営")) {
         return true;
       }
-      // 「照明（操作）」を消しても「照明」が残る（＝単に「照明」と書かれている）場合もマッチ
       const withoutSousa = raw
         .replace(/照明（操作）/g, "")
         .replace(/照明\(操作\)/g, "")
@@ -353,7 +343,6 @@ const isTaskForMember = (taskWho, memberObj) => {
       if (raw.includes("照明（操作）") || raw.includes("照明(操作)") || raw.includes("照明操作")) {
         return true;
       }
-      // 「照明（設営）」を消しても「照明」が残る（＝単に「照明」と書かれている）場合もマッチ
       const withoutSetsuei = raw
         .replace(/照明（設営）/g, "")
         .replace(/照明\(設営\)/g, "")
@@ -363,7 +352,6 @@ const isTaskForMember = (taskWho, memberObj) => {
       if (raw.includes("PA（設営）") || raw.includes("PA(設営)") || raw.includes("PA設営")) {
         return true;
       }
-      // 「PA（卓）」を消しても「PA」が残る（＝単に「PA」と書かれている）場合もマッチ
       const withoutTaku = raw
         .replace(/PA（卓）/g, "")
         .replace(/PA\(卓\)/g, "")
@@ -373,14 +361,12 @@ const isTaskForMember = (taskWho, memberObj) => {
       if (raw.includes("PA（卓）") || raw.includes("PA(卓)") || raw.includes("PA卓")) {
         return true;
       }
-      // 「PA（設営）」を消しても「PA」が残る（＝単に「PA」と書かれている）場合もマッチ
       const withoutSetsuei = raw
         .replace(/PA（設営）/g, "")
         .replace(/PA\(設営\)/g, "")
         .replace(/PA設営/g, "");
       if (withoutSetsuei.includes("PA")) return true;
     } else if (role === "文連") {
-      // 「幹文連」も含めて文連担当には表示
       if (raw.includes("文連")) return true;
     } else if (role.endsWith("（パトリ）")) {
       const partName = role.replace("（パトリ）", "");
@@ -388,7 +374,6 @@ const isTaskForMember = (taskWho, memberObj) => {
         return true;
       }
     } else {
-      // その他の役職（会計、渉外、総務、監督、チェックマン、舞台、楽器庫、格納庫、庶務、電ドラ、差し入れ、機材統括、web,SNS、BBQ、機材車、卒パ）
       if (raw.includes(role)) return true;
     }
   }
@@ -396,12 +381,30 @@ const isTaskForMember = (taskWho, memberObj) => {
   return false;
 };
 
-// タスクの対象となる全メンバー配列を取得（複数人タスクかどうかの判定や詳細画面での表示用）
-const getTargetMembersForTask = (taskWho) => {
-  return KANBU_ROSTER.filter((m) => isTaskForMember(taskWho, m)).map((m) => m.name);
+// ============================================================================
+// 手動追加・手動削除（マイリストから削除／マイリストに追加）を含めた最終判定
+// ============================================================================
+const isTaskInUserMyList = (task, memberObj) => {
+  if (!task || !memberObj) return false;
+  const userName = memberObj.name;
+  const excluded = Array.isArray(task.manualExcludedUsers) ? task.manualExcludedUsers : [];
+  const added = Array.isArray(task.manualAddedUsers) ? task.manualAddedUsers : [];
+
+  // 「マイリストから削除」された場合は最優先でマイリストから外す
+  if (excluded.includes(userName)) return false;
+  // 全体ToDoから「マイリストに追加」された場合はマイリストに含める
+  if (added.includes(userName)) return true;
+  // それ以外は名前・役職による自動判定
+  return isTaskForMember(task.who, memberObj);
 };
 
-// タスクの `completedBy` 配列を正規化するヘルパー（[{ name, time }] 形式に統一）
+// タスクの対象メンバー配列を取得（手動追加・手動除外も反映）
+const getTargetMembersForTask = (task) => {
+  if (!task) return [];
+  return KANBU_ROSTER.filter((m) => isTaskInUserMyList(task, m)).map((m) => m.name);
+};
+
+// タスクの `completedBy` 配列を正規化するヘルパー
 const normalizeCompletedBy = (completedByRaw) => {
   if (!Array.isArray(completedByRaw)) return [];
   return completedByRaw
@@ -415,7 +418,6 @@ const normalizeCompletedBy = (completedByRaw) => {
     .filter(Boolean);
 };
 
-// 指定ユーザーがそのタスクを「個人完了」しているか判定
 const isCompletedByUser = (task, userName) => {
   if (!task || !userName) return false;
   const list = normalizeCompletedBy(task.completedBy);
@@ -881,7 +883,10 @@ export default function App() {
 
   // 複数人ToDoの「自分だけ完了 ／ 全体完了 ／ 未完了に戻す」選択モーダル
   const [taskCompletionModal, setTaskCompletionModal] = useState(null);
-  // taskCompletionModal: { task, mode: 'complete' | 'uncomplete', selectedOption: 'self' | 'all' }
+
+  // ToDo削除時の「マイリストから削除 ／ 全体から完全に削除」選択モーダル
+  const [taskDeleteModal, setTaskDeleteModal] = useState(null);
+  // taskDeleteModal: { task, inMyList: boolean, selectedOption: 'remove_mylist' | 'delete_global' }
 
   // ポップアップモーダル制御
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -985,7 +990,7 @@ export default function App() {
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
-      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v8");
+      const bc = new BroadcastChannel("wpb_kanbu_sync_realtime_v9");
       bc.onmessage = (ev) => {
         if (ev.data && Array.isArray(ev.data.tasks)) {
           setBoardState(ev.data);
@@ -1102,7 +1107,7 @@ export default function App() {
     }
   };
 
-  // --- ログイン履歴記録（新規ログイン時 ＆ セッション開始時） ---
+  // --- ログイン履歴記録 ---
   const recordLoginEvent = async (userName, typeLabel = "ログイン") => {
     const nowTs = Date.now();
     const loginEntry = {
@@ -1113,7 +1118,6 @@ export default function App() {
       timestamp: nowTs
     };
 
-    // 最新のクラウド状態を取得してから追記することで上書き競合を防止
     if (db) {
       try {
         const docRef = doc(db, SYNC_COLLECTION, SYNC_DOC_ID);
@@ -1151,7 +1155,6 @@ export default function App() {
     commitState(boardState, `${typeLabel}しました`, userName, loginEntry);
   };
 
-  // 1ヶ月ログイン維持で画面を開いたときにもアクセス日時を記録（1セッションにつき1回）
   useEffect(() => {
     if (authInfo?.userName && !sessionAccessLoggedRef.current) {
       sessionAccessLoggedRef.current = true;
@@ -1192,6 +1195,111 @@ export default function App() {
   };
 
   // =========================================================================
+  // マイリストへの手動追加 ＆ 削除（マイリストから削除 ／ 全体から完全削除）
+  // =========================================================================
+  // 全体のToDoリストから自分のマイリストに追加する機能（ワンクッション確認付き）
+  const handleAddToMyList = (task) => {
+    if (!task || !currentUser) return;
+    requestConfirm({
+      title: "マイリストへの追加確認",
+      message: `以下のToDoを「${currentUser}」のマイリスト（マイToDo）に追加しますか？\n\n・担当：${task.who}\n・期限：${task.when}\n・内容：${task.what}`,
+      confirmLabel: "マイリストに追加する",
+      confirmColor: "bg-indigo-600 hover:bg-indigo-700",
+      onConfirm: () => {
+        const nextTasks = boardState.tasks.map((t) => {
+          if (t.id !== task.id) return t;
+          const prevAdded = Array.isArray(t.manualAddedUsers) ? t.manualAddedUsers : [];
+          const prevExcluded = Array.isArray(t.manualExcludedUsers) ? t.manualExcludedUsers : [];
+          const nextAdded = prevAdded.includes(currentUser) ? prevAdded : [...prevAdded, currentUser];
+          const nextExcluded = prevExcluded.filter((u) => u !== currentUser);
+          return {
+            ...t,
+            manualAddedUsers: nextAdded,
+            manualExcludedUsers: nextExcluded,
+            updatedBy: currentUser,
+            updatedAt: formatNow()
+          };
+        });
+        commitState(
+          { ...boardState, tasks: nextTasks },
+          `タスク（担当: ${task.who}）を自分のマイリストに追加しました`
+        );
+      }
+    });
+  };
+
+  // 削除ボタン（🗑️ または「マイリストから削除」ボタン）を押したときの処理
+  const openDeleteTaskModal = (task, defaultChoice = null) => {
+    if (!task) return;
+    const inMyList = isTaskInUserMyList(task, currentMemberObj);
+    const initialOption = defaultChoice
+      ? defaultChoice
+      : inMyList
+      ? "remove_mylist"
+      : "delete_global";
+
+    setTaskDeleteModal({
+      task,
+      inMyList,
+      selectedOption: initialOption
+    });
+  };
+
+  // 削除選択モーダルで選んだ選択肢を、さらにワンクッション確認のうえで実行
+  const executeTaskDeleteChoice = () => {
+    if (!taskDeleteModal) return;
+    const { task, selectedOption } = taskDeleteModal;
+    setTaskDeleteModal(null);
+
+    if (selectedOption === "remove_mylist") {
+      // 自分のマイリストからのみ削除（全体ToDoには残す）
+      requestConfirm({
+        title: "【マイリストから削除】の最終確認",
+        message: `以下のToDoを「${currentUser}」のマイリストからのみ削除しますか？\n\n・あなたのマイページ（マイToDo）から消えます。\n・全体のToDoリストや他のメンバーの画面にはそのまま残ります（あとから全体ToDoの「＋マイリストに追加」で戻すことも可能です）。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "マイリストから削除する",
+        confirmColor: "bg-amber-600 hover:bg-amber-700",
+        onConfirm: () => {
+          const nextTasks = boardState.tasks.map((t) => {
+            if (t.id !== task.id) return t;
+            const prevAdded = Array.isArray(t.manualAddedUsers) ? t.manualAddedUsers : [];
+            const prevExcluded = Array.isArray(t.manualExcludedUsers) ? t.manualExcludedUsers : [];
+            const nextAdded = prevAdded.filter((u) => u !== currentUser);
+            const nextExcluded = prevExcluded.includes(currentUser)
+              ? prevExcluded
+              : [...prevExcluded, currentUser];
+            return {
+              ...t,
+              manualAddedUsers: nextAdded,
+              manualExcludedUsers: nextExcluded,
+              updatedBy: currentUser,
+              updatedAt: formatNow()
+            };
+          });
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）を自分のマイリストから削除しました`
+          );
+        }
+      });
+    } else if (selectedOption === "delete_global") {
+      // 全体のToDoリストから完全に削除
+      requestConfirm({
+        title: "【全体のToDoリストから完全削除】の最終確認",
+        message: `以下のToDoを全体のToDoリストから完全に削除しますか？\n\n⚠️ 全員の画面および全体のToDoリストから完全に消去されます。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
+        confirmLabel: "全体から完全に削除する",
+        confirmColor: "bg-red-600 hover:bg-red-700",
+        onConfirm: () => {
+          const nextTasks = boardState.tasks.filter((t) => t.id !== task.id);
+          commitState(
+            { ...boardState, tasks: nextTasks },
+            `タスク（担当: ${task.who}）を全体リストから削除しました`
+          );
+        }
+      });
+    }
+  };
+
+  // =========================================================================
   // タスクの完了・未完了切り替え（自分だけ完了 ／ 全体完了 の選択＆ワンクッション確認）
   // =========================================================================
   const handleToggleTask = (taskId) => {
@@ -1201,11 +1309,9 @@ export default function App() {
     const myPersonalDone = isCompletedByUser(target, currentUser);
     const isGlobalDone = Boolean(target.completed);
 
-    // ケース1: まだ自分も全体も完了していない → 「自分だけ完了」か「全体完了」かを選択するモーダルを開く
     if (!isGlobalDone && !myPersonalDone) {
-      const targetMembers = getTargetMembersForTask(target.who);
-      const isMyTask = isTaskForMember(target.who, currentMemberObj);
-      // 複数人対象で自分が含まれている場合はデフォルトを「自分だけ完了（self）」にする
+      const targetMembers = getTargetMembersForTask(target);
+      const isMyTask = isTaskInUserMyList(target, currentMemberObj);
       const defaultOpt = isMyTask && targetMembers.length > 1 ? "self" : isMyTask ? "self" : "all";
       setTaskCompletionModal({
         task: target,
@@ -1215,7 +1321,6 @@ export default function App() {
       return;
     }
 
-    // ケース2: 自分だけ完了している（全体はまだ未完了）→「未完了（マイToDo）に戻す」か「全体も完了にする」かを選択
     if (!isGlobalDone && myPersonalDone) {
       setTaskCompletionModal({
         task: target,
@@ -1225,7 +1330,6 @@ export default function App() {
       return;
     }
 
-    // ケース3: タスク全体が完了済み（isGlobalDone === true）→ 未完了（ToDo）に戻すか選択
     if (isGlobalDone) {
       setTaskCompletionModal({
         task: target,
@@ -1235,14 +1339,12 @@ export default function App() {
     }
   };
 
-  // 完了・未完了モーダルで選択した内容を、さらにワンクッション確認のうえで実行
   const executeTaskCompletionChoice = () => {
     if (!taskCompletionModal) return;
     const { task, selectedOption } = taskCompletionModal;
     setTaskCompletionModal(null);
 
     if (selectedOption === "self") {
-      // 自分だけ完了にする（ワンクッション確認）
       requestConfirm({
         title: "【自分だけ完了】の最終確認",
         message: `以下のToDoを「${currentUser}（自分）だけ完了」にしますか？\n\n・マイページの「未完了ToDo」から消え、マイページの「完了済み」へ移動します。\n・全体のToDoリストには残り、詳細画面の「個人で完了した人リスト」にあなたの名前が記録されます。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -1263,7 +1365,6 @@ export default function App() {
         }
       });
     } else if (selectedOption === "all") {
-      // タスク全体を完了にする（ワンクッション確認）
       requestConfirm({
         title: "【全員分（全体）を完了】の最終確認",
         message: `以下のToDoを「全員分（タスク全体）完了」にしますか？\n\n・全体のToDoリストおよび全員のマイページで「完了済み」へ移動します。\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -1287,7 +1388,6 @@ export default function App() {
         }
       });
     } else if (selectedOption === "revert_self") {
-      // 自分の個人完了を取り消してマイToDo（未完了）に戻す（ワンクッション確認）
       requestConfirm({
         title: "【マイToDo（未完了）へ戻す】最終確認",
         message: `「${currentUser}」の個人完了を取り消して、マイページの未完了ToDoリストに戻しますか？\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -1307,7 +1407,6 @@ export default function App() {
         }
       });
     } else if (selectedOption === "revert_all") {
-      // タスク全体の完了を取り消して全体の未完了ToDoに戻す（ワンクッション確認）
       requestConfirm({
         title: "【タスク全体を未完了ToDoへ戻す】最終確認",
         message: `以下の完了済みタスクを、全体の【やるべきことリスト（未完了ToDo）】に戻しますか？\n（※自分自身の個人完了チェックもあわせて解除されます）\n\n【対象ToDo】\n担当：${task.who}\n内容：${task.what}`,
@@ -1329,7 +1428,7 @@ export default function App() {
     }
   };
 
-  // --- 新規タスク追加・編集・削除 ---
+  // --- 新規タスク追加・編集 ---
   const handleAddTask = (isCompleted = false) => {
     const what = newTaskWhat.trim();
     if (!what) {
@@ -1356,6 +1455,8 @@ export default function App() {
           importance: Number(newTaskImportance) || 0,
           completed: isCompleted,
           completedBy: [],
+          manualAddedUsers: [],
+          manualExcludedUsers: [],
           updatedBy: currentUser,
           updatedAt: formatNow()
         };
@@ -1416,21 +1517,6 @@ export default function App() {
         );
         setEditingTaskId(null);
         commitState({ ...boardState, tasks: nextTasks }, `タスク（担当: ${finalWho}）を編集しました`);
-      }
-    });
-  };
-
-  const deleteTask = (id) => {
-    const target = boardState.tasks.find((t) => t.id === id);
-    if (!target) return;
-    requestConfirm({
-      title: "ToDo削除の確認",
-      message: `以下のToDoを削除しますか？\n\n・担当：${target.who}\n・内容：${target.what}`,
-      confirmLabel: "削除する",
-      confirmColor: "bg-red-600 hover:bg-red-700",
-      onConfirm: () => {
-        const nextTasks = boardState.tasks.filter((t) => t.id !== id);
-        commitState({ ...boardState, tasks: nextTasks }, `タスク（担当: ${target.who}）を削除しました`);
       }
     });
   };
@@ -1851,23 +1937,24 @@ export default function App() {
       return matchWho && matchImp && matchQ;
     };
 
-    // 全体リスト（t.completed のみで未完了/完了を区分）
+    // 全体リスト
     let todos = boardState.tasks.filter((t) => !t.completed && matchTask(t));
     let dones = boardState.tasks.filter((t) => t.completed && matchTask(t));
 
-    // マイページリスト（「自分だけ完了」にしたタスクはマイToDoから消え、マイ完了済みに移動する）
+    // マイページリスト（自動判定 ＋ 手動マイリスト追加 − 手動マイリスト削除 を反映）
     let myTodos = boardState.tasks.filter((t) => {
-      const forMe = isTaskForMember(t.who, currentMemberObj);
-      if (!forMe) return false;
+      if (!isTaskInUserMyList(t, currentMemberObj)) return false;
       const doneForMe = Boolean(t.completed) || isCompletedByUser(t, currentUser);
       if (doneForMe) return false;
       return matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q));
     });
 
     let myDones = boardState.tasks.filter((t) => {
-      const forMe = isTaskForMember(t.who, currentMemberObj);
+      const excluded = Array.isArray(t.manualExcludedUsers) ? t.manualExcludedUsers : [];
+      if (excluded.includes(currentUser)) return false;
+      const inMyList = isTaskInUserMyList(t, currentMemberObj);
       const doneByMe = isCompletedByUser(t, currentUser);
-      if (!forMe && !doneByMe) return false;
+      if (!inMyList && !doneByMe) return false;
       const doneForMe = Boolean(t.completed) || doneByMe;
       if (!doneForMe) return false;
       return matchImportanceFilter(t.importance) && (!q || t.what.toLowerCase().includes(q) || t.who.toLowerCase().includes(q));
@@ -1901,13 +1988,15 @@ export default function App() {
     return map;
   }, [boardState.loginLogs]);
 
-  // --- タスクカード（個人完了者バッジ ＆ 詳細展開時の個人完了リスト表示対応） ---
+  // --- タスクカード（マイリストへの追加・マイリストからの削除・個人完了リスト対応） ---
   const renderTaskCard = (t, isMyPageContext = false) => {
     const imp = Number(t.importance) || 0;
     const isLong = isLongContent(t.what);
     const isExpanded = Boolean(expandedItemIds[t.id]);
     const personalDoneList = normalizeCompletedBy(t.completedBy);
     const myPersonalDone = isCompletedByUser(t, currentUser);
+    const inMyList = isTaskInUserMyList(t, currentMemberObj);
+    const isManuallyAdded = Array.isArray(t.manualAddedUsers) && t.manualAddedUsers.includes(currentUser);
     const isCheckedVisually = isMyPageContext ? (Boolean(t.completed) || myPersonalDone) : Boolean(t.completed);
 
     return (
@@ -1966,6 +2055,11 @@ export default function App() {
                   ✓ 自分は完了済（全体は未完了）
                 </span>
               )}
+              {isManuallyAdded && (
+                <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-[11px] px-2 py-0.5 rounded-lg">
+                  📌 マイリスト手動追加
+                </span>
+              )}
             </div>
 
             {/* 操作ボタン */}
@@ -2004,9 +2098,9 @@ export default function App() {
               </button>
               <button
                 type="button"
-                onClick={() => deleteTask(t.id)}
+                onClick={() => openDeleteTaskModal(t)}
                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                title="削除"
+                title="削除（マイリストからのみ削除 / 全体から削除 を選択可能）"
               >
                 <Trash2 size={15} />
               </button>
@@ -2035,7 +2129,7 @@ export default function App() {
             </div>
           )}
 
-          {/* 下段：本文（タップで展開または詳細ウィンドウを開く） */}
+          {/* 下段：本文 */}
           <div
             onClick={() => {
               if (isLong) toggleExpandItem(t.id);
@@ -2071,7 +2165,7 @@ export default function App() {
             </div>
           )}
 
-          {/* アクションバー（全文開閉・詳細表示・完了状態の切り替えボタン） */}
+          {/* アクションバー（全文開閉・詳細表示・マイリスト追加/削除・未完了戻し） */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {isLong && (
@@ -2093,6 +2187,7 @@ export default function App() {
                   )}
                 </button>
               )}
+
               <button
                 type="button"
                 onClick={() => setDetailModalItem({ type: "task", data: t })}
@@ -2101,6 +2196,45 @@ export default function App() {
                 <Maximize2 size={12} />
                 <span>詳細・完了者一覧</span>
               </button>
+
+              {/* 全体ToDo画面などで「マイリストにない場合」→「＋ マイリストに追加」ボタンを表示 */}
+              {!inMyList && (
+                <button
+                  type="button"
+                  onClick={() => handleAddToMyList(t)}
+                  className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                  title="このToDoを自分のマイリスト（マイToDo）に追加します"
+                >
+                  <BookmarkPlus size={13} />
+                  <span>＋ マイリストに追加</span>
+                </button>
+              )}
+
+              {/* マイリストに入っている場合：マイページ上では「マイリストから削除」、全体ToDo上では「マイリスト登録済（クリックで削除可）」 */}
+              {inMyList && isMyPageContext && (
+                <button
+                  type="button"
+                  onClick={() => openDeleteTaskModal(t, "remove_mylist")}
+                  className="text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                  title="全体のToDoには残したまま、自分のマイリストからのみ外します"
+                >
+                  <BookmarkMinus size={13} />
+                  <span>マイリストから削除</span>
+                </button>
+              )}
+
+              {inMyList && !isMyPageContext && (
+                <button
+                  type="button"
+                  onClick={() => openDeleteTaskModal(t, "remove_mylist")}
+                  className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-amber-50 hover:text-amber-800 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                  title="現在あなたのマイリストに入っています（タップするとマイリストから外せます）"
+                >
+                  <BookmarkCheck size={13} />
+                  <span>マイリスト内（外す）</span>
+                </button>
+              )}
+
               {isCheckedVisually && (
                 <button
                   type="button"
@@ -2343,7 +2477,7 @@ export default function App() {
 
       <main className="max-w-3xl mx-auto px-4 pt-5 space-y-5">
         {/* =================================================================== */}
-        {/* タブ1: マイページ（未完了ToDo ／ マイ完了済み ／ 自由メモ） */}
+        {/* タブ1: マイページ（マイToDo ／ マイ完了済 ／ 自由メモ） */}
         {/* =================================================================== */}
         {activeTab === "mypage" && (
           <div className="space-y-4">
@@ -2359,7 +2493,7 @@ export default function App() {
                     )}
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    あなたの正確な担当役職・本人宛てのToDoのみが抽出されます
+                    違うToDoが入っている場合は「マイリストから削除」、足りない場合は全体ToDoから「＋マイリストに追加」できます
                   </p>
                 </div>
                 <button
@@ -2394,7 +2528,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* マイページ内の3サブタブ（未完了ToDo ／ マイ完了済み ／ 自由メモ） */}
+            {/* マイページ内の3サブタブ */}
             <div className="flex bg-slate-200/80 p-1 rounded-2xl gap-1">
               <button
                 type="button"
@@ -2436,8 +2570,21 @@ export default function App() {
 
                 <div className="space-y-2.5">
                   {myTodoList.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-200">
-                      現在、あなたの名前・担当役職宛ての未完了ToDoはありません 🎉
+                    <div className="bg-white rounded-3xl p-8 text-center space-y-3 border border-slate-200">
+                      <div className="text-slate-400 text-sm">
+                        現在、あなたのマイToDo（未完了）はありません 🎉
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab("tasks");
+                          setTaskSubTab("todo");
+                        }}
+                        className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-xl transition inline-flex items-center gap-1.5"
+                      >
+                        <BookmarkPlus size={14} />
+                        <span>全体のToDoリストからマイリストに追加する</span>
+                      </button>
                     </div>
                   ) : (
                     myTodoList.map((t) => renderTaskCard(t, true))
@@ -2609,7 +2756,7 @@ export default function App() {
         )}
 
         {/* =================================================================== */}
-        {/* タブ2: 全体ToDo */}
+        {/* タブ2: 全体ToDo（ここから自分のマイリストに追加も可能） */}
         {/* =================================================================== */}
         {activeTab === "tasks" && (
           <div className="space-y-4">
@@ -2619,7 +2766,7 @@ export default function App() {
                   ✅ 全体のToDo・完了済みリスト
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  複数人タスクは「自分だけ完了」と「全体完了」を選べます。詳細に個人完了者一覧が表示されます
+                  マイリストにない項目は各カードの「＋ マイリストに追加」ボタンから自分のマイToDoに追加できます
                 </p>
               </div>
               <button
@@ -3012,7 +3159,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 管理者（小林秀星）専用のログイン履歴＆変更履歴パネル */}
             {isAdmin ? (
               <div className="bg-white rounded-3xl p-5 border-2 border-amber-300 shadow-xs space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -3029,7 +3175,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* ログイン履歴 / 変更履歴 切り替えタブ */}
                 <div className="flex bg-slate-100 p-1 rounded-2xl gap-1">
                   <button
                     type="button"
@@ -3059,7 +3204,6 @@ export default function App() {
 
                 {adminLogSubTab === "login" ? (
                   <div className="space-y-4">
-                    {/* 全20名の最終ログイン状況サマリー */}
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
                       <div className="text-xs font-bold text-slate-700">
                         👥 幹部代20名の最終ログイン日時一覧
@@ -3089,7 +3233,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* 時系列のログイン履歴リスト */}
                     <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                       <div className="text-xs font-bold text-slate-600">
                         🕒 時系列ログイン・アクセス記録
@@ -3121,7 +3264,6 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  /* 編集・変更履歴リスト（管理者のみ） */
                   <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
                     {(boardState.logs || []).map((log) => (
                       <div
@@ -3182,6 +3324,125 @@ export default function App() {
           })}
         </div>
       </nav>
+
+      {/* =================================================================== */}
+      {/* モーダルB: ToDoの削除方法選択ウィンドウ（マイリストから削除 ／ 全体から完全削除） */}
+      {/* =================================================================== */}
+      {taskDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <Trash2 className="text-red-600" size={20} />
+                <span>削除方法の選択</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTaskDeleteModal(null)}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs space-y-1">
+              <div className="font-bold text-indigo-900 break-words">
+                👤 担当: {taskDeleteModal.task.who}
+              </div>
+              <div className="text-slate-700 line-clamp-3 whitespace-pre-wrap break-words">
+                {taskDeleteModal.task.what}
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold text-slate-700">
+                自分のマイリストからのみ削除するか、全体のToDoリストから完全に削除するか選択してください：
+              </p>
+
+              {/* 選択肢1: マイリストからのみ削除 */}
+              {taskDeleteModal.inMyList && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTaskDeleteModal({ ...taskDeleteModal, selectedOption: "remove_mylist" })
+                  }
+                  className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                    taskDeleteModal.selectedOption === "remove_mylist"
+                      ? "border-amber-600 bg-amber-50/70"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mt-0.5">
+                    {taskDeleteModal.selectedOption === "remove_mylist" ? (
+                      <CheckCircle2 size={20} className="text-amber-600" />
+                    ) : (
+                      <Circle size={20} className="text-slate-400" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-sm text-slate-900">
+                      🙋‍♂️ マイリストから削除（自分のマイページからのみ外す）
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      自分の担当ではないのにマイリストに入っている場合に使います。全体のToDoリストや他メンバーの画面にはそのまま残ります。
+                    </p>
+                  </div>
+                </button>
+              )}
+
+              {/* 選択肢2: 全体のToDoリストから完全削除 */}
+              <button
+                type="button"
+                onClick={() =>
+                  setTaskDeleteModal({ ...taskDeleteModal, selectedOption: "delete_global" })
+                }
+                className={`w-full p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                  taskDeleteModal.selectedOption === "delete_global"
+                    ? "border-red-600 bg-red-50/70"
+                    : "border-slate-200 bg-white hover:bg-slate-50"
+                }`}
+              >
+                <div className="mt-0.5">
+                  {taskDeleteModal.selectedOption === "delete_global" ? (
+                    <CheckCircle2 size={20} className="text-red-600" />
+                  ) : (
+                    <Circle size={20} className="text-slate-400" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <div className="font-bold text-sm text-slate-900">
+                    🌐 全体のToDoリストから完全に削除する
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    タスク自体が不要になった場合に使います。全員の画面および全体ToDoリストから完全に消去されます。
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setTaskDeleteModal(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={executeTaskDeleteChoice}
+                className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-sm ${
+                  taskDeleteModal.selectedOption === "remove_mylist"
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                次へ（確認画面へ）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =================================================================== */}
       {/* モーダルA: 複数人ToDoの「自分だけ完了 ／ 全体完了 ／ 未完了に戻す」選択ウィンドウ */}
@@ -3391,7 +3652,7 @@ export default function App() {
       )}
 
       {/* =================================================================== */}
-      {/* モーダル0: 全文・詳細表示ウィンドウ（個人完了した人リスト統合表示） */}
+      {/* モーダル0: 全文・詳細表示ウィンドウ（個人完了した人リスト ＆ マイリスト追加/削除対応） */}
       {/* =================================================================== */}
       {detailModalItem && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
@@ -3418,16 +3679,26 @@ export default function App() {
                 const taskObj =
                   boardState.tasks.find((x) => x.id === detailModalItem.data.id) || detailModalItem.data;
                 const personalDoneList = normalizeCompletedBy(taskObj.completedBy);
-                const targetMembers = getTargetMembersForTask(taskObj.who);
+                const targetMembers = getTargetMembersForTask(taskObj);
                 const doneNames = personalDoneList.map((e) => e.name);
                 const remainingMembers = targetMembers.filter((m) => !doneNames.includes(m));
+                const inMyList = isTaskInUserMyList(taskObj, currentMemberObj);
 
                 return (
                   <>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <ImportanceBadge importance={taskObj.importance} />
                       <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
                         全体状態: {taskObj.completed ? "✅ 全体完了済み" : "🔥 未完了 (進行中)"}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                          inMyList
+                            ? "bg-indigo-100 text-indigo-800"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {inMyList ? "📌 あなたのマイリスト内" : "マイリスト外"}
                       </span>
                     </div>
 
@@ -3542,32 +3813,60 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-slate-100">
-              {detailModalItem.type === "task" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const t = detailModalItem.data;
-                      setDetailModalItem(null);
-                      handleToggleTask(t.id);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"
-                  >
-                    完了状態の切り替え / ToDoに戻す
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const t = detailModalItem.data;
-                      setDetailModalItem(null);
-                      startEditTask(t);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold"
-                  >
-                    ✏️ 編集する
-                  </button>
-                </>
-              )}
+              {detailModalItem.type === "task" && (() => {
+                const taskObj =
+                  boardState.tasks.find((x) => x.id === detailModalItem.data.id) || detailModalItem.data;
+                const inMyList = isTaskInUserMyList(taskObj, currentMemberObj);
+                return (
+                  <>
+                    {!inMyList ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailModalItem(null);
+                          handleAddToMyList(taskObj);
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1"
+                      >
+                        <BookmarkPlus size={14} />
+                        <span>＋ マイリストに追加</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailModalItem(null);
+                          openDeleteTaskModal(taskObj, "remove_mylist");
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1"
+                      >
+                        <BookmarkMinus size={14} />
+                        <span>マイリストから削除</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModalItem(null);
+                        handleToggleTask(taskObj.id);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold"
+                    >
+                      完了切替 / ToDoに戻す
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModalItem(null);
+                        startEditTask(taskObj);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold"
+                    >
+                      ✏️ 編集
+                    </button>
+                  </>
+                );
+              })()}
               {detailModalItem.type === "decision" && (
                 <button
                   type="button"
